@@ -53,7 +53,7 @@ function AuthForm({ modalText, modalToggle }) {
         {/* <label htmlFor="email">אימייל</label> */}
         <input
           id="username"
-          type="text"
+          type="number"
           name="username"
           placeholder="id"
           required
@@ -65,7 +65,7 @@ function AuthForm({ modalText, modalToggle }) {
         {/* <label htmlFor="image">Password</label> */}
         <input
           id="password"
-          type="text"
+          type="number"
           name="password"
           placeholder="re-enter your id"
           required

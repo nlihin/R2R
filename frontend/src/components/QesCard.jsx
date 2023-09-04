@@ -18,7 +18,7 @@ const QesCard = ({
   otherRatings,
 }) => {
   const [emojiRate, setEmojiRate] = useState(normal);
-  const [userRating, setUserRatings] = useState(3);
+  const [userRating, setUserRatings] = useState();
   const [crowdRating, setCrowdRatings] = useState({
     outstanding: 0,
     very_good: 0,

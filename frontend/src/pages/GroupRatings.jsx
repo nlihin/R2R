@@ -91,7 +91,7 @@ const GroupRatings = () => {
       (acc, curr) => acc + curr,
       0
     );
-    if (totalRating === 100) submitHandler();
+    if (totalRating === 100) return true;
     else if (totalRating > 100) {
       //TODO: CREATE POPUP FOR RATING FAIL
       setModalToggle(true);
@@ -105,7 +105,18 @@ const GroupRatings = () => {
       // alert("Your numbers don't sum up to 100. Please fix.");
     }
   };
+  const validateGroupRanking = () => {
+    if (!groupRatingsData) {
+      setModalToggle(true);
+      setModalText("Please rate the group");
+      return false;
+    }
+    return true;
+  };
 
+  const validateGroup = () => {
+    validateGroupRating() && validateGroupRanking() && submitHandler();
+  };
   const submitHandler = async () => {
     setIsConflict(false);
     const tok = tokenLoader();
@@ -188,7 +199,7 @@ const GroupRatings = () => {
           <ButtonContainer>
             <BackButton>
               <input
-                onClick={() => validateGroupRating()}
+                onClick={() => validateGroup()}
                 type="submit"
                 value="Submit"
               />

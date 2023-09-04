@@ -13,7 +13,7 @@ const Root = () => {
       <Footer>
         <div>
           <h4>Credits:</h4>
-          <p>Server Development: Matan. </p>
+          <p>Server Development: Matan Lange. </p>
           <p>Design, Client Development: Yehontan Nisan</p>
         </div>
       </Footer>
