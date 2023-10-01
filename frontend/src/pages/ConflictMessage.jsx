@@ -14,7 +14,6 @@ const getGroupData = async (groupNum) => {
   const baseURL = "https://rate2rank-0d561bf6674a.herokuapp.com/";
   let groupResDate;
   let groupRes = await fetch(`${baseURL}/rate?group_number=${groupNum}`, {
-
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -81,15 +80,13 @@ const ConflictMessage = ({
   }, [groups]); //changes
 
   const finishConflict = async (orderdConflict) => {
-    const baseURL = "https://rate2rank-0d561bf6674a.herokuapp.com/";
-
     const tok = tokenLoader();
 
     let result = [...firstTempGroups, ...orderdConflict, ...thirdTempGroups];
     const orderedConflict = reverseParseGroupsConflict(result);
     let payload = {
       list_rank: orderedConflict,
-      number_questions: numberOfPrompex,
+      number_questions: numberOfPromp,
     };
     let res = await fetch(BaseURL + "rank", {
       method: "POST",

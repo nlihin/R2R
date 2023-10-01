@@ -14,7 +14,6 @@ const QesCard = ({
   rankHandler,
   otherRatings,
 }) => {
-  const [emojiRate, setEmojiRate] = useState(normal);
   const [userRating, setUserRatings] = useState();
 
   const [crowdRating, setCrowdRatings] = useState({
