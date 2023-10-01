@@ -20,7 +20,7 @@ export const Navbar = styled.nav`
 `;
 export const List = styled.ul`
   display: grid;
-  grid-template-areas: "logout logo";
+  grid-template-areas: "logo logout";
   width: 100%;
   height: 100%;
   justify-content: space-between;
@@ -28,7 +28,7 @@ export const List = styled.ul`
   text-align: center;
   list-style: none;
   //   @media (max-width: 740px) {
-  //     grid-template-areas: "logout logo logo";
+  //     grid-template-areas: "logo logo logout";
   //   }
 `;
 export const Logo = styled.li`

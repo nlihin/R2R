@@ -41,6 +41,8 @@ const GroupRatings = () => {
   useEffect(() => {
     const getGroupData = async () => {
       const token1 = tokenLoader();
+      const baseURL = "https://rate2rank-0d561bf6674a.herokuapp.com/";
+
       const groupNum = params.groupId;
       let groupResData;
       let groupRes = await fetch(`${BaseURL}/rate?group_number=${groupNum}`, {
@@ -90,7 +92,7 @@ const GroupRatings = () => {
       (acc, curr) => acc + curr,
       0
     );
-    if (totalRating === 100) submitHandler();
+    if (totalRating === 100) return true;
     else if (totalRating > 100) {
       //TODO: CREATE POPUP FOR RATING FAIL
       setModalToggle(true);
@@ -104,7 +106,18 @@ const GroupRatings = () => {
       // alert("Your numbers don't sum up to 100. Please fix.");
     }
   };
+  const validateGroupRanking = () => {
+    if (!groupRatingsData) {
+      setModalToggle(true);
+      setModalText("Please rate the group");
+      return false;
+    }
+    return true;
+  };
 
+  const validateGroup = () => {
+    validateGroupRating() && validateGroupRanking() && submitHandler();
+  };
   const submitHandler = async () => {
     setIsConflict(false);
     const tok = tokenLoader();
@@ -116,6 +129,9 @@ const GroupRatings = () => {
         answer: otherQuestionsData,
       },
     };
+    console.log(ratingBody);
+    const baseURL = "https://rate2rank-0d561bf6674a.herokuapp.com/";
+
     // TODO: save base url in constants and import
     let res = await fetch(BaseURL + "rate", {
       method: "POST",
@@ -137,10 +153,11 @@ const GroupRatings = () => {
       return navigate("/");
     }
     let rankListParsed = parseGroupsConflict(resData?.data?.rank_list);
-    let hasConflict = rankListParsed.some(
-      (item) => parseInt(item[1]) === parseInt(groupRatingsData)
+    let isConflict = rankListParsed.some(
+      (item) => item[1] === groupRatingsData
     );
-    if (hasConflict) {
+    if (isConflict) {
+
       setIsConflict(true);
       setDataConflict(resData?.data?.rank_list);
     } else {
@@ -184,7 +201,7 @@ const GroupRatings = () => {
           <ButtonContainer>
             <BackButton>
               <input
-                onClick={() => validateGroupRating()}
+                onClick={() => validateGroup()}
                 type="submit"
                 value="Submit"
               />

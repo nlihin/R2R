@@ -11,8 +11,10 @@ import { BaseURL } from "../routes/url";
 
 const getGroupData = async (groupNum) => {
   const token1 = tokenLoader();
+  const baseURL = "https://rate2rank-0d561bf6674a.herokuapp.com/";
   let groupResDate;
-  let groupRes = await fetch(`${BaseURL}/rate?group_number=${groupNum}`, {
+  let groupRes = await fetch(`${baseURL}/rate?group_number=${groupNum}`, {
+
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -78,7 +80,9 @@ const ConflictMessage = ({
     displayNameGroup(secondList[0][0]);
   }, [groups]); //changes
 
-  const finishConflict = async (orderdConflict, numberOfPrompex) => {
+  const finishConflict = async (orderdConflict) => {
+    const baseURL = "https://rate2rank-0d561bf6674a.herokuapp.com/";
+
     const tok = tokenLoader();
 
     let result = [...firstTempGroups, ...orderdConflict, ...thirdTempGroups];

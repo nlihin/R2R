@@ -41,7 +41,9 @@ export const action = async ({ request }) => {
       name: data.get("name"),
     };
   }
-  const res = await fetch(BaseURL + mode, {
+  console.log(5);
+  const res = await fetch("https://rate2rank-0d561bf6674a.herokuapp.com/" + mode, {
+
     method: "POST",
     headers: {
       "Content-Type": "application/json",

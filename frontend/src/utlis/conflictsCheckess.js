@@ -16,6 +16,8 @@ export const conflictsChecks = async (
       indexs.push(index);
     }
   });
+  console.log(3);
+  const baseURL = "https://rate2rank-0d561bf6674a.herokuapp.com/";
 
   let firstTempGroups = convertedGroups?.slice(0, indexs[0]);
   let secondTempGroups = convertedGroups?.slice(indexs[0], indexs.length);
