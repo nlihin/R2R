@@ -6,7 +6,6 @@ import {
   useNavigation,
   useSearchParams,
 } from "react-router-dom";
-import { json, redirect } from "react-router-dom";
 
 import classes from "./AuthForm.module.css";
 
@@ -16,7 +15,6 @@ function AuthForm({ modalText, modalToggle }) {
   const [searchParams] = useSearchParams();
   const [iD, setID] = useState();
   const [reID, setReID] = useState();
-  console.log(data);
   let mode = searchParams.get("mode") || "login";
   const isLogin = mode === "login";
   const isSubmitting = navigation.state === "submitting";
@@ -31,14 +29,12 @@ function AuthForm({ modalText, modalToggle }) {
 
   const submitChecks = () => {
     if (reID !== iD) {
-      console.log(2);
       modalText("your IDs dosent much, fix it.");
       modalToggle(true);
     } else if (reID.length !== 9) {
       modalText("your ID has to contain 9 digits, fix it.");
       modalToggle(true);
     } else if (data.msg) {
-      console.log(1);
       modalText(data.msg);
       modalToggle(true);
     } else {

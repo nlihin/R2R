@@ -10,12 +10,10 @@ const QesCardTwo = ({ questionNum, question, rankHandler2 }) => {
   const [userRating, setUserRatings] = useState(3);
 
   useEffect(() => {
-    console.log(userRating);
     rankHandler2(questionNum, userRating);
   }, [parseInt(userRating), questionNum]);
 
   const ratingHandler = (e) => {
-    console.log(e.target.value);
     setUserRatings(parseInt(e.target.value));
     rankHandler2(questionNum, e.target.value);
   };

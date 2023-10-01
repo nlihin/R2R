@@ -10,7 +10,6 @@ export const ConflictMessageFunc = (groups, currentGroup, groupRatingsData) => {
   let thirdTempGroups = groups.slice(indexs.length);
   let orderedConflictGroup = [];
   for (let i = 0; i < secondTempGroups.length; i++) {
-    console.log(i);
     let answer = window.confirm(
       `group ${secondTempGroups[i][0]} or group ${currentGroup}?`
     );
@@ -32,6 +31,5 @@ export const ConflictMessageFunc = (groups, currentGroup, groupRatingsData) => {
     ...orderedConflictGroup,
     ...thirdTempGroups,
   ];
-  console.log(firstTempGroups);
   return firstTempGroups;
 };

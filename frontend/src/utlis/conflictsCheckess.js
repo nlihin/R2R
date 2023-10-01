@@ -1,5 +1,6 @@
 import { tokenLoader } from "../utlis/auth";
 import { reverseParseGroupsConflict } from "./parsing";
+import { BaseURL } from "../routes/url";
 
 export const conflictsChecks = async (
   convertedGroups,
@@ -17,12 +18,12 @@ export const conflictsChecks = async (
   });
   console.log(3);
   const baseURL = "https://rate2rank-0d561bf6674a.herokuapp.com/";
+
   let firstTempGroups = convertedGroups?.slice(0, indexs[0]);
   let secondTempGroups = convertedGroups?.slice(indexs[0], indexs.length);
   let thirdTempGroups = convertedGroups?.slice(indexs.length);
   let orderedConflictGroup = [];
   for (let i = 0; i < secondTempGroups?.length; i++) {
-    console.log(i);
     setQuestion(`group ${secondTempGroups[i][0]} or group ${currentGroup}?`);
 
     if (answer) {
@@ -38,9 +39,6 @@ export const conflictsChecks = async (
       break;
     }
   }
-  console.log(firstTempGroups);
-  console.log(thirdTempGroups);
-  console.log(orderedConflictGroup);
   let result = [
     ...firstTempGroups,
     ...orderedConflictGroup,
@@ -48,12 +46,11 @@ export const conflictsChecks = async (
   ];
 
   const orderedConflict = reverseParseGroupsConflict(result);
-  console.log(orderedConflict);
   let payload = {
     list_rank: orderedConflict,
     number_questions: 1,
   };
-  let res = await fetch(baseURL + "rank", {
+  let res = await fetch(BaseURL + "rank", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

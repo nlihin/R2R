@@ -6,9 +6,6 @@ import {
   UserRatingsWarrper,
 } from "./QesCardStyles";
 import classes from "./QesCard.module.css";
-import sad from "../assets/sad-face.svg";
-import smile from "../assets/smile.svg";
-import normal from "../assets/emoticon.svg";
 
 const QesCard = ({
   userEvaluation,
@@ -19,6 +16,7 @@ const QesCard = ({
 }) => {
   const [emojiRate, setEmojiRate] = useState(normal);
   const [userRating, setUserRatings] = useState();
+
   const [crowdRating, setCrowdRatings] = useState({
     outstanding: 0,
     very_good: 0,
@@ -26,19 +24,11 @@ const QesCard = ({
     fair: 0,
     needs_improvement: 0,
   });
-  console.log(question);
   useEffect(() => {
-    if (userRating < 3) setEmojiRate(sad);
-    if (userRating === 3) setEmojiRate(normal);
-    if (userRating > 3) setEmojiRate(smile);
-    console.log(userRating);
     rankHandler(userRating, crowdRating);
   }, [userRating, userRating, crowdRating]);
 
   const ratingHandler = (e) => {
-    if (e.target.value < 3) setEmojiRate(sad);
-    if (e.target.value === 3) setEmojiRate(normal);
-    if (e.target.value > 3) setEmojiRate(smile);
     setUserRatings(parseInt(e.target.value));
   };
 

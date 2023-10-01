@@ -3,7 +3,7 @@ import { json, redirect } from "react-router-dom";
 import AuthForm from "../components/AuthForm";
 import { Warpper } from "./AuthenticationStyles";
 import BasicModal from "../components/BasicModal";
-import { useEffect } from "react";
+import { BaseURL } from "../routes/url";
 
 const Authentication = () => {
   const [modalToggle, setModalToggle] = useState(false);
@@ -43,6 +43,7 @@ export const action = async ({ request }) => {
   }
   console.log(5);
   const res = await fetch("https://rate2rank-0d561bf6674a.herokuapp.com/" + mode, {
+
     method: "POST",
     headers: {
       "Content-Type": "application/json",

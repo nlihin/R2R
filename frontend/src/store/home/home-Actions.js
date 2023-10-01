@@ -6,8 +6,6 @@ export const fetchTableData = () => {
     try {
       const response = await Get("finance_report/filters");
       dispatch(homeActions.fetchGroups(response));
-    } catch (error) {
-      console.log(error);
-    }
+    } catch (error) {}
   };
 };
