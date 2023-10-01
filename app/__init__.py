@@ -6,8 +6,8 @@ from flask_jwt_extended import JWTManager
 import datetime
 import os
 
-app = Flask(__name__,static_folder='/frontend/build',static_url_path='')
-cors = CORS(app,  supports_credentials=True, allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST"])
+app = Flask(__name__,static_folder='../frontend/build',static_url_path='')
+cors = CORS(app, origins='http://localhost:3000', supports_credentials=True, allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST"])
 
 
 
