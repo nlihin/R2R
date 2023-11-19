@@ -42,7 +42,8 @@ export const action = async ({ request }) => {
     };
   }
   console.log(5);
-  const res = await fetch("https://rate2rank-0d561bf6674a.herokuapp.com/" + mode, {
+
+  const res = await fetch(`${BaseURL}${mode}`, {
 
     method: "POST",
     headers: {

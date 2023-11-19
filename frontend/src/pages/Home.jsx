@@ -7,9 +7,8 @@ import { BaseURL } from "../routes/url";
 
 const getAvailGroups = async () => {
   const token1 = tokenLoader();
-  const baseURL = "https://rate2rank-0d561bf6674a.herokuapp.com/";
   // TODO: save base url in constants and import
-  const res = await fetch(baseURL + "group", {
+  const res = await fetch(`${BaseURL}group`, {
 
     method: "GET",
     headers: {
