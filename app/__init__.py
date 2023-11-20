@@ -7,7 +7,7 @@ import datetime
 import os
 
 #app = Flask(__name__)
-app = Flask(_name_,static_folder='../frontend/build',static_url_path='')
+app = Flask(__name__,static_folder='../frontend/build',static_url_path='')
 cors = CORS(app, origins='http://localhost:3000', supports_credentials=True, allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST"])
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL_PROD')
