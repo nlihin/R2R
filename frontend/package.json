@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "proxy": "https://rate2rank-0d561bf6674a.herokuapp.com/",
   "dependencies": {
