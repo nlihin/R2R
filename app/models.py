@@ -46,7 +46,6 @@ class Rate(db.Model):
     group_number = db.Column(db.Integer(), nullable=False, primary_key=True)
     datetime = db.Column(db.DateTime(), nullable=True)
     rate = db.Column(db.Integer(), nullable=False)
-    feedback = db.Column(db.String(), nullable=False, primary_key=False)
 
 
 class CrowdRating(db.Model):

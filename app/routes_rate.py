@@ -33,8 +33,7 @@ def rate_page():
     rate = Rate(username=current_user.username,
                 group_number=group_number,
                 datetime=datetime.now(),
-                rate=data['rate'],
-                feedback=data['feedback12'])
+                rate=data['rate'])
 
     crowd_ratings = data['crowd_ratings']
 

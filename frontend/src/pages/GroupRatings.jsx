@@ -27,7 +27,6 @@ const GroupRatings = () => {
   const params = useParams();
   const navigate = useNavigate();
   const [groupData, setGroupData] = useState();
-  const [feedback1, setFeedback1Data] = useState();
   const [crowdRatingsData, setCrowdRatingsData] = useState();
   const [groupRatingsData, setGroupRatingsData] = useState();
   const [otherQuestionsData, setOtherQuestionsData] = useState({});
@@ -76,10 +75,9 @@ const GroupRatings = () => {
     navigate("/");
   };
 
-  const groupDataHandler = (rating, crowdRatings, feedback1) => {
+  const groupDataHandler = (rating, crowdRatings) => {
     setGroupRatingsData(rating);
     setCrowdRatingsData(crowdRatings);
-    setFeedback1Data(feedback1)
   };
 
   const otherQuestionsHandler = (questionNumber, rating) => {
@@ -124,7 +122,6 @@ const GroupRatings = () => {
     const tok = tokenLoader();
     const ratingBody = {
       data: {
-        feedback12: feedback1,
         group_number: parseInt(params.groupId),
         rate: groupRatingsData,
         crowd_ratings: crowdRatingsData,
