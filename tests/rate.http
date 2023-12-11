@@ -1,12 +1,11 @@
 // The request body is provided in place
-GET http://127.0.0.1:5000/rate
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTY4MzI5ODgyNiwianRpIjoiNzYxYzc1N2MtYTYyYi00ZTNmLTg4MWEtZTY3OTdjMWVkZDdmIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6Im1hdCIsIm5iZiI6MTY4MzI5ODgyNiwiZXhwIjoxNjgzMjk5NzI2fQ.7RTxuJ6EEGIyEhfyzTziLKvVoyjfsWPdLy4xKm1O9R4
+GET http://127.0.0.1:5000/rate?group_number=1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTY4NjU5NTcwNiwianRpIjoiYTQzMzA0NTUtMDQ5OS00MWFiLTgwZWQtYjBkZDg5NmE1MTgxIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6Im1hdCIsIm5iZiI6MTY4NjU5NTcwNiwiZXhwIjoxNjg2NTk2NjA2fQ.ujRxA4xAkBcOOoVW7QLng1cmzI1FGZHoBSNjwTc9sXw
 Content-Type: application/json
 Cookie: key=first-value
 
-{
-  "group_number": "1"
-}
+
+
 
 
 

@@ -1,3 +1,9 @@
 /instance
 app/__pycache__/
 .idea
+
+frontend/node_modules
+npm-debug.log
+.DS_Store
+/*.env
+

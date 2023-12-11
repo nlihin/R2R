@@ -34,11 +34,19 @@ class Question(db.Model):
     description = db.Column(db.String(length=1024), nullable=False, unique=True)
 
 
+class QuestionAnswer(db.Model):
+    id = db.Column(db.Integer(), primary_key=True)
+    user_id = db.Column(db.Integer(), primary_key=False)
+    question_number = db.Column(db.Integer(), nullable=False, unique=False)
+    answer = db.Column(db.Integer(), nullable=False, unique=False)
+
+
 class Rate(db.Model):
     username = db.Column(db.String(), nullable=False, primary_key=True)
     group_number = db.Column(db.Integer(), nullable=False, primary_key=True)
     datetime = db.Column(db.DateTime(), nullable=True)
     rate = db.Column(db.Integer(), nullable=False)
+    feedback = db.Column(db.String(), nullable=False, primary_key=False)
 
 
 class CrowdRating(db.Model):
@@ -57,5 +65,3 @@ class Rank(db.Model):
     list_rank = db.Column(db.String(length=1024), nullable=True)
     number_questions = db.Column(db.Integer(), nullable=False, default=0)
     experiment_group = db.Column(db.Integer(), nullable=False, default=1)
-
-
