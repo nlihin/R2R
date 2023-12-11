@@ -15,7 +15,7 @@ const QesCard = ({
   otherRatings,
 }) => {
   const [userRating, setUserRatings] = useState();
-
+  const [feedback1, setUserfeedback] = useState('');
   const [crowdRating, setCrowdRatings] = useState({
     outstanding: 0,
     very_good: 0,
@@ -24,11 +24,15 @@ const QesCard = ({
     needs_improvement: 0,
   });
   useEffect(() => {
-    rankHandler(userRating, crowdRating);
-  }, [userRating, userRating, crowdRating]);
+    rankHandler(userRating, crowdRating,feedback1);
+  }, [userRating, userRating, crowdRating,feedback1]);
 
   const ratingHandler = (e) => {
     setUserRatings(parseInt(e.target.value));
+  };
+  const feedbackHandler = (e) => {
+    //setUserfeedback(e.target.toString);
+    setUserfeedback(e.target.value);
   };
 
   const crowdGroupRatingHandler = (e) => {
@@ -143,9 +147,13 @@ const QesCard = ({
           </UserRatingsContainer>
           {otherRatings && (
             <textarea
+              value={feedback1}
+                id="feedback1"
+              name="postContent"
               rows="4"
               style={{ width: "100%", textAlign: "left" }}
-              placeholder="Your feedback"
+              placeholder="Your feedback is needed please"
+              onChange={(e) => feedbackHandler(e)}
             ></textarea>
           )}
         </UserRatingsWarrper>
