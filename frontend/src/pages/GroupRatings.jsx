@@ -180,7 +180,7 @@ const GroupRatings = () => {
       {!isConflict && (
         <>
           <GroupName>
-            Team: {params?.groupId} {groupData?.group_name}
+            Team {params?.groupId}: {groupData?.group_name}
           </GroupName>
           <QesCard
             userEvaluation={true}

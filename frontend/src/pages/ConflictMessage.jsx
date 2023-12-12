@@ -143,18 +143,18 @@ const ConflictMessage = ({
       }}
     >
       <h2 style={{ color: "#000" }}>
-        You gave the same evaluation to team:
+        You gave the same evaluation to<br /> Team
         {/* {displayNameGroup(secondTempGroups[currentIndex][0])} */}
         {secondTempGroups?.length > 0 ? (
           <span>
             {" "}
-            {secondTempGroups[currentIndex][0]}{" "}
+            {secondTempGroups[currentIndex][0]}{": "}
             {displayConflictNameGroup ? displayConflictNameGroup : ""}
           </span>
         ) : (
           "czxczx"
-        )}{" "}
-        and team:{currentGroup} {groupName}
+        )}{" "}<br />
+        and<br /> Team {currentGroup}: {groupName}
       </h2>
       <p style={{ color: "#000" }}>
         Which is better ?<br />
@@ -165,13 +165,13 @@ const ConflictMessage = ({
       </p>
       <div className="actionsBtns" style={{ display: "flex" }}>
         <ConflictBtn onClick={() => lowerRatings()}>
-          Team:
+          Team {" "}
           {secondTempGroups?.length > 0
             ? secondTempGroups[currentIndex][0]
             : "czxczx"}
         </ConflictBtn>
         <ConflictBtn onClick={() => higherRatings()}>
-          Team:{currentGroup}
+          Team{" "}{currentGroup}
         </ConflictBtn>
       </div>
     </div>

@@ -7,7 +7,7 @@ const Card = ({ groupName, GroupStatus, groupNum }) => {
     <Warpper GroupStatus={GroupStatus}>
       <Link to={`/groups/${groupNum}`}>
         <GroupName>
-          Team: {groupNum} {groupName}
+          Team {groupNum}: {groupName}
         </GroupName>
         <h3>{`${GroupStatus ? "Completed" : "Enter your feedback"}`}</h3>
       </Link>
