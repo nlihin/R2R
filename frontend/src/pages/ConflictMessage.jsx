@@ -47,7 +47,7 @@ const ConflictMessage = ({
   const [orderedConflictGroups, setOrderedConflictGroups] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [displayConflictNameGroup, setDisplayConflictNameGroup] = useState();
-  const [numberOfPromp, setNumberOfPromp] = useState(0);
+  const [numberOfPromp, setNumberOfPromp] = useState(1);
 
   const displayNameGroup = async (groupNum) => {
     let ConflictNameGroup = await getGroupData(groupNum);

@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 // } from "./QesCard2Styles";
 
 const QesCardTwo = ({ questionNum, question, rankHandler2 }) => {
-  const [userRating, setUserRatings] = useState(3);
+  const [userRating, setUserRatings] = useState();
 
   useEffect(() => {
     rankHandler2(questionNum, userRating);

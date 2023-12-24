@@ -51,7 +51,8 @@ def rate_page():
     for q_num in questions_numbers:
         q_add = QuestionAnswer(user_id=int(current_user.username),
                                question_number=int(q_num),
-                               answer=answer[str(q_num)])
+                               answer=answer[str(q_num)],
+                               group_number=int(group_number))
         db.session.add(q_add)
 
     db.session.add(rate)

@@ -6,7 +6,7 @@ import {
 } from "./ExtraQusStyles";
 
 const ExtraQus = ({ questionNum, question, rankHandler2 }) => {
-  const [userRating, setUserRatings] = useState(3);
+  const [userRating, setUserRatings] = useState();
 
   useEffect(() => {
     rankHandler2(questionNum, userRating);
@@ -26,7 +26,7 @@ const ExtraQus = ({ questionNum, question, rankHandler2 }) => {
   return (
     <>
       <ExtraQusWarrper>
-        <ExtraQusTitle>{question}:</ExtraQusTitle>
+        <ExtraQusTitle>{question}</ExtraQusTitle>
         <ExtraInputsContainer>
           <div>
             <input
