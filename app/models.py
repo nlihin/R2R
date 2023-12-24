@@ -39,6 +39,7 @@ class QuestionAnswer(db.Model):
     user_id = db.Column(db.Integer(), primary_key=False)
     question_number = db.Column(db.Integer(), nullable=False, unique=False)
     answer = db.Column(db.Integer(), nullable=False, unique=False)
+    group_number = db.Column(db.Integer(), nullable=True, primary_key=False)
 
 
 class Rate(db.Model):
