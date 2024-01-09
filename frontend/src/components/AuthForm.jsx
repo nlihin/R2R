@@ -15,6 +15,7 @@ function AuthForm({ modalText, modalToggle }) {
   const [searchParams] = useSearchParams();
   const [iD, setID] = useState();
   const [reID, setReID] = useState();
+  const [classCode, setClassCode] = useState();
   let mode = searchParams.get("mode") || "login";
   const isLogin = mode === "login";
   const isSubmitting = navigation.state === "submitting";
@@ -27,12 +28,16 @@ function AuthForm({ modalText, modalToggle }) {
     }
   };
 
+  const checkingCode = (e) => {
+    setClassCode(e.target.value);
+  };
+
   const submitChecks = () => {
     if (reID !== iD) {
-      modalText("your IDs dosent much, fix it.");
+      modalText("your IDs don't match, please retry.");
       modalToggle(true);
     } else if (reID.length !== 9) {
-      modalText("your ID has to contain 9 digits, fix it.");
+      modalText("your ID has to contain 9 digits, please retry.");
       modalToggle(true);
     } else if (data.msg) {
       modalText(data.msg);
@@ -69,6 +74,20 @@ function AuthForm({ modalText, modalToggle }) {
           onChange={(e) => chackingID(e)}
         />
       </p>
+      {isLogin && (
+      <p>
+        {/* <label htmlFor="image">session</label> */}
+        <input
+          id="class_code"
+          type="text"
+          name="class_code"
+          placeholder="class code"
+          required
+          size="3"
+          onChange={(e) => checkingCode(e)}
+        />
+      </p>
+      )}
       {!isLogin && (
         <p>
           {/* <label htmlFor="image">Password</label> */}
@@ -95,7 +114,7 @@ function AuthForm({ modalText, modalToggle }) {
       )}
       <div className={classes.actions}>
         <Link to={`?mode=${isLogin ? "register" : "login"}`}>
-          {isLogin ? "Register? click here!" : "Login? click here!"}
+          {isLogin ? "Click here to register" : "Click here to login"}
         </Link>
         <button disabled={isSubmitting} onClick={submitChecks}>
           {isSubmitting ? "Submitting..." : "ENTER"}

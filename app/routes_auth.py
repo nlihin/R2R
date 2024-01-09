@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.models import User
+from app.models import User, Class_codes
 from app import db, jwt
 from flask_jwt_extended import create_access_token, get_jwt
 from flask_cors import CORS, cross_origin
@@ -14,11 +14,13 @@ auth = Blueprint('auth', __name__)
 
 @auth.route('/register', methods=['POST'])
 @cross_origin()
+#insert user to db
 def register():
     new_user = User(username=request.json.get('username'),
                     name=request.json.get('name'),
                     email_address=request.json.get('email_address'),
                     password=request.json.get('password'))
+                    #exp_code = request.json.get('exp_code')) #Lihi
     if new_user.validate_username() and new_user.validate_password():
         db.session.add(new_user)
         db.session.commit()
@@ -40,16 +42,42 @@ def handle_options():
 def login():
     username = request.json.get("username", None)
     password = request.json.get("password", None)
+    class_code_value = request.json.get("class_code", None)
 
     current_user = db.session.query(User).filter_by(username=username).one_or_none()
+    current_class_code = db.session.query(Class_codes).filter_by(class_code=class_code_value).one_or_none()
 
-    if current_user and password == current_user.password:
-        access_token = create_access_token(identity=username)
-        # current_token = get_jwt()
-        # current_token['exp'] += datetime.timedelta(hours=1)
-        return jsonify(access_token=access_token, status=200)
+    if current_user:
+        if password == current_user.password:
+            if current_class_code:
+                current_user.class_code = class_code_value
+                # Commit the changes to the database
+                db.session.commit()
+                access_token = create_access_token(identity=username)
+                return jsonify(access_token=access_token, status=200)
+            else:
+                return jsonify(msg="Invalid class code, ask your course instructor for the correct code", status=400), 400
+        else:
+            return jsonify(msg="Your password should match your username", status=400), 400
+    else:
+        return jsonify(msg="Invalid username, did you register?", status=400), 400
 
-    return jsonify(msg="Bad username or password", status=400), 400
+
+
+    # if current_class_code is None:
+    #    return jsonify(msg="Invalid class code", status=400), 400
+    #
+    # if current_user and password == current_user.password:
+    #     # Associate the class code with the user
+    #     current_user.class_code = class_code_value
+    #     # Commit the changes to the database
+    #     db.session.commit()
+    #     access_token = create_access_token(identity=username)
+    #     #current_token = get_jwt()
+    #     # current_token['exp'] += datetime.timedelta(hours=1)
+    #     return jsonify(access_token=access_token, status=200)
+    #
+    # return jsonify(msg="Bad username or password", status=400), 400
 
 
 # Register a callback function that takes whatever object is passed in as the

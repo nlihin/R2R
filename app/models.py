@@ -7,6 +7,7 @@ class User(db.Model):
     name = db.Column(db.String(length=30), nullable=False, unique=False)
     email_address = db.Column(db.String(length=50), nullable=False, unique=False)
     password = db.Column(db.String(length=60), nullable=False)
+    class_code = db.Column(db.String(length=1024), nullable=False, unique=True)
 
     def validate_username(self):
 
@@ -26,7 +27,11 @@ class Group(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     number = db.Column(db.Integer(), nullable=False, unique=True)
     name = db.Column(db.String(length=1024), nullable=False, unique=True)
+    class_code = db.Column(db.String(length=1024), nullable=False, unique=True)
 
+class Class_codes(db.Model):
+    id = db.Column(db.Integer(), primary_key=True)
+    class_code = db.Column(db.String(length=1024), nullable=False, unique=True)
 
 class Question(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
