@@ -32,6 +32,7 @@ export const action = async ({ request }) => {
     authData = {
       username: data.get("username"),
       password: data.get("password"),
+      class_code: data.get("class_code"),
     };
   } else {
     authData = {
@@ -39,6 +40,7 @@ export const action = async ({ request }) => {
       password: data.get("password"),
       email_address: data.get("email"),
       name: data.get("name"),
+      class_code: data.get("class_code"),
     };
   }
   console.log(5);
