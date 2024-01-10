@@ -7,7 +7,6 @@ from datetime import datetime
 
 rate = Blueprint('rate', __name__)
 
-rank = Blueprint('rank', __name__)
 
 @rate.route('/rate', methods=['GET'])
 @jwt_required()
@@ -58,7 +57,7 @@ def rate_page():
 
     db.session.add(rate)
     db.session.add(crowd_ratings)
-    # db.session.commit()
+    db.session.commit()
 
     # ranking
     # ToDo add check if same rates
@@ -77,10 +76,10 @@ def rate_page():
     #eli
     for rank in list_rank:
         if rank[1] == data['rate']:
-            db.session.commit()
-            #this calls the pairwise questions page
-            #that page calls routes_rank.py
-            #we want to return here afterwards, to do the commit after this (instead of before)
+            # db.session.commit()
+            # #this calls the pairwise questions page
+            # #that page calls routes_rank.py
+            # #we want to return here afterwards, to do the commit after this (instead of before)
             return jsonify(status=200, ranking=True, data={"rank_list": exs_rank.list_rank})
     # eli
     #for rank in list_rank:
@@ -105,15 +104,3 @@ def rate_page():
 
 
 
-
-@rank.route('/rank', methods=['POST'])
-@jwt_required()
-def rank_page():
-    # user sends - number of questions, and new ranking list add table for which questions where asked
-
-    user_rank = Rank.query.filter_by(username=current_user.username).first()
-    user_rank.list_rank = request.json.get('list_rank')
-    user_rank.number_questions += request.json.get('number_questions')
-    db.session.commit()
-
-    return jsonify(status=200)
