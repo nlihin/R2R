@@ -44,3 +44,5 @@ def serve(path=None):
         # Otherwise, serve the requested file from the static folder
         return send_from_directory(app.static_folder, path)
 
+
+

@@ -8,6 +8,23 @@ from datetime import datetime
 rate = Blueprint('rate', __name__)
 
 
+#lihi
+@app.route('/groups/<int:group_number>')
+@jwt_required()
+def get_group(group_number):
+    print(request.url)
+    print(request.args.get('group_number'))
+    group_name = db.session.query(Group).filter_by(number=group_number).one_or_none()
+    # if group valid
+    if group_name:
+        questions = {q.number: q.description for q in Question.query.all()}
+
+        return jsonify(status=200, data={"group_name": group_name.name, "questions": questions})
+
+    # check response number
+    return jsonify(status=400, msg="Group not registered")
+
+
 @rate.route('/rate', methods=['GET'])
 @jwt_required()
 def get_groups():
