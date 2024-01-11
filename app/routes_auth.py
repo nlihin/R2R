@@ -20,7 +20,6 @@ def register():
                     name=request.json.get('name'),
                     email_address=request.json.get('email_address'),
                     password=request.json.get('password'))
-                    #exp_code = request.json.get('exp_code')) #Lihi
     if new_user.validate_username() and new_user.validate_password():
         db.session.add(new_user)
         db.session.commit()

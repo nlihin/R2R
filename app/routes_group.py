@@ -25,4 +25,3 @@ def get_rating_info():
 
     return jsonify(status = 200,data=group_info)
 
-#, exp_code=current_user.exp_code
