@@ -9,7 +9,7 @@ rate = Blueprint('rate', __name__)
 
 
 #lihi
-@app.route('/groups/<int:group_number>')
+@rate.route('/groups/<int:group_number>')
 @jwt_required()
 def get_group(group_number):
     print(request.url)
