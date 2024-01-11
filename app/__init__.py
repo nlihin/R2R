@@ -32,7 +32,9 @@ app.register_blueprint(rank)
 
 from flask.helpers import send_from_directory
 
-@app.route('/')
+#@app.route('/')
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
 @cross_origin()
 def serve():
     return send_from_directory(app.static_folder,'index.html')
