@@ -37,7 +37,3 @@ from flask.helpers import send_from_directory
 def serve():
     return send_from_directory(app.static_folder,'index.html')
 
-#11.1
-@app.route('/<path:path>')
-def catch_all(path='index.html'):
-    return send_from_directory(app.static_folder, path)
