@@ -124,9 +124,9 @@ const GroupRatings = () => {
     const tok = tokenLoader();
     const ratingBody = {
       data: {
-        feedback12: feedback1,
         group_number: parseInt(params.groupId),
         rate: groupRatingsData,
+        feedback12: feedback1,
         crowd_ratings: crowdRatingsData,
         answer: otherQuestionsData,
       },
