@@ -12,6 +12,7 @@ rate = Blueprint('rate', __name__)
 @jwt_required()
 def get_groups():
     print(request.url)
+    print(request.args.get('group_number'))
     group_name = db.session.query(Group).filter_by(number=request.args.get('group_number')).one_or_none()
     # if group valid
     if group_name:

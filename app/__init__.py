@@ -36,6 +36,11 @@ from flask.helpers import send_from_directory
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 @cross_origin()
-def serve():
-    return send_from_directory(app.static_folder,'index.html')
+def serve(path=None):
+    if path is None or not path.startswith('static/'):
+        # If the path is None or doesn't start with 'static/', serve index.html
+        return send_from_directory(app.static_folder, 'index.html')
+    else:
+        # Otherwise, serve the requested file from the static folder
+        return send_from_directory(app.static_folder, path)
 
