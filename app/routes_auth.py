@@ -63,22 +63,6 @@ def login():
 
 
 
-    # if current_class_code is None:
-    #    return jsonify(msg="Invalid class code", status=400), 400
-    #
-    # if current_user and password == current_user.password:
-    #     # Associate the class code with the user
-    #     current_user.class_code = class_code_value
-    #     # Commit the changes to the database
-    #     db.session.commit()
-    #     access_token = create_access_token(identity=username)
-    #     #current_token = get_jwt()
-    #     # current_token['exp'] += datetime.timedelta(hours=1)
-    #     return jsonify(access_token=access_token, status=200)
-    #
-    # return jsonify(msg="Bad username or password", status=400), 400
-
-
 # Register a callback function that takes whatever object is passed in as the
 # identity when creating JWTs and converts it to a JSON serializable format.
 @jwt.user_identity_loader
