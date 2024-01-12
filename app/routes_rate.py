@@ -17,9 +17,7 @@ def get_groups():
     # if group valid
     if group_name:
         questions = {q.number: q.description for q in Question.query.all()}
-
         return jsonify(status=200, data={"group_name": group_name.name, "questions": questions})
-
     # check response number
     return jsonify(status=400, msg="Group not registered")
 
@@ -47,25 +45,31 @@ def rate_page():
                                 fair=crowd_ratings['fair'],
                                 needs_improvement=crowd_ratings['needs_improvement'])
 
+    # add only if this rating is not existing in the db
+    exs_rate = Rate.query.filter_by(username=current_user.username,group_number=group_number).first()
+    if not exs_rate:
+        db.session.add(rate)
+
+    #if this addition exists, don't add again
+    exs_crowd_rating = CrowdRating.query.filter_by(username=current_user.username,group_number=group_number).first()
+    print(exs_crowd_rating)
+    if not exs_crowd_rating:
+        db.session.add(crowd_ratings)
+
     # add users answers
     questions_numbers = {q.number for q in Question.query.all()}
     for q_num in questions_numbers:
-        q_add = QuestionAnswer(user_id=int(current_user.username),
-                               question_number=int(q_num),
-                               answer=answer[str(q_num)],
-                               group_number=int(group_number))
-        db.session.add(q_add)
+        q_exs = QuestionAnswer.query.filter_by(user_id=int(current_user.username), question_number=int(q_num), group_number=group_number).first()
+        if not q_exs:
+            q_add = QuestionAnswer(user_id=int(current_user.username),
+                                   question_number=int(q_num),
+                                   answer=answer[str(q_num)],
+                                   group_number=int(group_number))
+            db.session.add(q_add)
 
-
-
-    db.session.add(rate)
-    db.session.add(crowd_ratings)
     db.session.commit()
 
-    # ranking
-    # ToDo add check if same rates
     exs_rank = Rank.query.filter_by(username=current_user.username, date=datetime.today().date()).first()
-
     # if users first input insert ranking to db
     if not exs_rank:
         t = [(group_number, rate.rate)]
