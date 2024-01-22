@@ -7,9 +7,10 @@ import { BaseURL } from "../routes/url";
 
 const getAvailGroups = async () => {
   const token1 = tokenLoader();
+ // const classCode = localStorage.getItem("classCode");  // Retrieve class_code from local storage
   // TODO: save base url in constants and import
+     // const res = await fetch(`${BaseURL}group?class_code`, {
   const res = await fetch(`${BaseURL}group`, {
-
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -30,8 +31,10 @@ const getAvailGroups = async () => {
 
 const getGroupData = async (groupNum) => {
   const token1 = tokenLoader();
+  const classCode = localStorage.getItem("classCode");  // Retrieve class_code from local storage
   let groupResDate;
   let groupRes = await fetch(`${BaseURL}/rate?group_number=${groupNum}`, {
+  //let groupRes = await fetch(`${BaseURL}/rate?group_number=${groupNum}&class_code=${classCode}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -65,6 +68,7 @@ const getAllGroupsData = async (groupsNums) => {
 const Home = () => {
   const [availGroups, setAvailGroups] = useState({});
   const [groups, setGroups] = useState({});
+  const [displayedGroups, setDisplayedGroups] = useState([]);//lihi
 
   useEffect(() => {
     const updateAvailGroupsData = async () => {
@@ -74,19 +78,40 @@ const Home = () => {
     updateAvailGroupsData();
   }, []);
 
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     const updateGroupsData = async () => {
-      let totalGroupData = {};
-      let tempAvailGroups = availGroups;
+      //let totalGroupData = {};//lihi
+      let tempAvailGroups = availGroups; //lihi
+      console.log(`waiting`);
       let allGroupsData = await getAllGroupsData(Object.keys(tempAvailGroups));
+      console.log(`done waiting`);
+
       for (let i = 0; i < allGroupsData.length; i++) {
         let group = allGroupsData[i];
         let groupNum = group["groupNum"];
-        totalGroupData[groupNum] = { rated: availGroups[groupNum], ...group };
+        //lihi
+        //totalGroupData[groupNum] = { rated: availGroups[groupNum], ...group };
+        let updatedGroup = { rated: availGroups[groupNum], ...group };
+
+        // Log to check the iteration and state updates
+        //console.log(`Processing group ${groupNum}`);
+
+        // Update the state with the new group data
+        setGroups(prevGroups => ({ ...prevGroups, [groupNum]: updatedGroup }));
+
+        // Update the displayed groups
+        setDisplayedGroups((prevDisplayedGroups) => [...prevDisplayedGroups, groupNum]);
+
+        //console.log('Updated state:', groups);
+       // await new Promise((resolve) => setTimeout(resolve, 1000));
+
       }
 
-      setGroups({ ...totalGroupData });
-      return totalGroupData;
+      //setGroups({ ...totalGroupData });  //lihi
+      //return totalGroupData;//lihi
+      setIsLoading(false);
     };
     updateGroupsData();
   }, [availGroups]);
