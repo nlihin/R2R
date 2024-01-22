@@ -25,7 +25,7 @@ class User(db.Model):
 
 class Group(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
-    number = db.Column(db.Integer(), nullable=False, unique=True)
+    number = db.Column(db.Integer(), nullable=False, unique=False)
     name = db.Column(db.String(length=1024), nullable=False, unique=True)
     class_code = db.Column(db.String(length=1024), nullable=False, unique=True)
 

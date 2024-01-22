@@ -43,9 +43,15 @@ export const action = async ({ request }) => {
       class_code: data.get("class_code"),
     };
   }
-  console.log(5);
+  //console.log(5);
+
+
+
+  // Fetch the user ID from the local storage
+  //const classCode = authData.class_code;
 
   const res = await fetch(`${BaseURL}${mode}`, {
+  //const res = await fetch(`${BaseURL}${mode}?class_code=${authData.class_code}`, {
 
     method: "POST",
     headers: {
@@ -54,6 +60,7 @@ export const action = async ({ request }) => {
     },
     body: JSON.stringify(authData),
   });
+
 
   if (
     res.status === 422 ||
@@ -71,6 +78,7 @@ export const action = async ({ request }) => {
     return redirect("/auth");
   }
   const resData = await res.json();
+  //console.log("API Response:", resData);
   const token = resData.access_token;
 
   localStorage.setItem("token", token);
