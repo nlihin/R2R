@@ -33,13 +33,16 @@ function AuthForm({ modalText, modalToggle }) {
   };
 
   const submitChecks = () => {
+    //for debugging
+    console.log("API Response Data:", data);
+
     if (reID !== iD) {
       modalText("your IDs don't match, please retry.");
       modalToggle(true);
     } else if (reID.length !== 9) {
       modalText("your ID has to contain 9 digits, please retry.");
       modalToggle(true);
-    } else if (data.msg) {
+    } else if (data && data.msg) {
       modalText(data.msg);
       modalToggle(true);
     } else {
