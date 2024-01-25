@@ -1,13 +1,10 @@
 from flask import Blueprint, request, jsonify
 from app.models import User, Class_codes
 from app import db, jwt
-from flask_jwt_extended import create_access_token, get_jwt
+from flask_jwt_extended import create_access_token
 from flask_cors import CORS, cross_origin
 from flask import make_response
-import datetime
-from flask_jwt_extended import get_jwt_identity
-from flask_jwt_extended import jwt_required
-from flask_jwt_extended import current_user
+
 
 auth = Blueprint('auth', __name__)
 
@@ -80,3 +77,5 @@ def user_identity_lookup(user):
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
     return User.query.filter_by(username=identity).one_or_none()
+
+

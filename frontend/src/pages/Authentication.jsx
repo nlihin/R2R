@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { json, redirect } from "react-router-dom";
 import AuthForm from "../components/AuthForm";
 import { Warpper } from "./AuthenticationStyles";
@@ -8,6 +8,39 @@ import { BaseURL } from "../routes/url";
 const Authentication = () => {
   const [modalToggle, setModalToggle] = useState(false);
   const [modalText, setModalText] = useState();
+  const [tokenExpiration, setTokenExpiration] = useState(0);
+
+  //added for session expiration
+  useEffect(() => {
+  const checkTokenExpiration = async () => {
+    const expirationTime = localStorage.getItem("tokenExpiration");
+    if (expirationTime && Date.now() > parseInt(expirationTime)) {
+      // Token has expired, refresh it
+      const refreshRes = await fetch(`${BaseURL}refresh`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: "Bearer " + localStorage.getItem("token"),
+        },
+      });
+
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        const newToken = refreshData.access_token;
+        const newExpiration = refreshData.expires_in * 1000 + Date.now();
+        localStorage.setItem("token", newToken);
+        localStorage.setItem("tokenExpiration", newExpiration);
+        setTokenExpiration(newExpiration);
+      } else {
+        // Handle refresh error, e.g., redirect to login
+        // Add your logic here
+      }
+    }
+  };
+
+  checkTokenExpiration();
+}, [tokenExpiration]);
 
   return (
     <Warpper>
@@ -51,8 +84,6 @@ export const action = async ({ request }) => {
   //const classCode = authData.class_code;
 
   const res = await fetch(`${BaseURL}${mode}`, {
-  //const res = await fetch(`${BaseURL}${mode}?class_code=${authData.class_code}`, {
-
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -78,10 +109,11 @@ export const action = async ({ request }) => {
     return redirect("/auth");
   }
   const resData = await res.json();
-  //console.log("API Response:", resData);
   const token = resData.access_token;
-
+  const expiration = resData.expires_in * 1000 + Date.now();
   localStorage.setItem("token", token);
+  localStorage.setItem("tokenExpiration", expiration);
+  //setTokenExpiration(expiration);
 
   return redirect("/");
 };

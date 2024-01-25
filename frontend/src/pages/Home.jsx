@@ -5,9 +5,10 @@ import { tokenLoader } from "../utlis/auth";
 import { json } from "react-router-dom";
 import { BaseURL } from "../routes/url";
 
-const getAvailGroups = async () => {
-  const token1 = tokenLoader();
+const getAvailGroups = async (token1) => {
+  //const token1 = tokenLoader();
    // save base url in constants and import
+    console.log(`getAvailGroups`);
     const res = await fetch(`${BaseURL}group`, {
     method: "GET",
     headers: {
@@ -23,25 +24,21 @@ const getAvailGroups = async () => {
     throw json({ message: "Could not authenticate user." }, { status: 500 });
   }
   let resData = await res.json();
-
   return resData.data;
 };
 
-const getGroupData = async (groupNum) => {
-  const token1 = tokenLoader();
-  const classCode = localStorage.getItem("classCode");  // Retrieve class_code from local storage
+const getGroupData = async (groupNum, token1) => {
+  //const token1 = tokenLoader();//moved outside
+  console.log(`getGroupData`);
   let groupResDate;
   let groupRes = await fetch(`${BaseURL}/rate?group_number=${groupNum}`, {
-  //let groupRes = await fetch(`${BaseURL}/rate?group_number=${groupNum}&class_code=${classCode}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
       Authorization: "Bearer " + token1,
     },
-    // body: JSON.stringify({ group_number: groupNumInt }),
   });
-  // TODO: raise errors to user
   if (groupRes.status === 422 || groupRes.status === 401) {
     return groupRes;
   }
@@ -52,16 +49,7 @@ const getGroupData = async (groupNum) => {
   return groupResDate.data;
 };
 
-// const getAllGroupsData = async (groupsNums) => {
-//   let groupsData = [];
-//   for (let i = 0; i < groupsNums.length; i++) {
-//     let groupNum = groupsNums[i];
-//     let singGroupData = await getGroupData(groupNum);
-//     singGroupData["groupNum"] = groupNum;
-//     groupsData.push(singGroupData);
-//   }
-//   return groupsData;
-// };
+
 
 const Home = () => {
   const [availGroups, setAvailGroups] = useState({});
@@ -69,22 +57,25 @@ const Home = () => {
   const [displayedGroups, setDisplayedGroups] = useState([]);//lihi
 
   useEffect(() => {
-    const updateAvailGroupsData = async () => {
-      let availGroups = await getAvailGroups();
-      setAvailGroups({ ...availGroups });
+    console.log(`UpdataAvailGroupsData`);
+      const updateAvailGroupsData = async () => {
+        const token = tokenLoader();
+        let availGroups = await getAvailGroups(token);
+        setAvailGroups({ ...availGroups });
     };
     updateAvailGroupsData();
   }, []);
 
    useEffect(() => {
-    const updateGroupsData = async () => {
+       console.log(`updateGroupsData`);
+       const updateGroupsData = async () => {
         console.log(Object.keys(availGroups));
         let groupNums = Object.keys(availGroups)
         console.log(`waiting`);
-
+        const token = tokenLoader();
         for (let i = 0; i < groupNums.length; i++) {
             let groupNum = groupNums[i];
-            let group = await getGroupData(groupNum); //data for this specific num
+            let group = await getGroupData(groupNum, token); //data for this specific num
             console.log(groupNum);
 
             let updatedGroup = { rated: availGroups[groupNum], ...group };
