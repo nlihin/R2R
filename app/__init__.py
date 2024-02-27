@@ -20,7 +20,7 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 #app.config['JWT_REFRESH_TOKEN_EXPIRES'] = 86400  # Refresh token expiration time (1 day)
 #from stackoverflow:
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(seconds=14400)  #session expiration: 4 hours
-app.config['JWT_REFRESH_TOKEN_EXPIRES'] = datetime.timedelta(seconds=3600)  #refresh token expirationfix
+app.config['JWT_REFRESH_TOKEN_EXPIRES'] = datetime.timedelta(seconds=3600)  #refresh token expiration fix
 
 db = SQLAlchemy(app)
 jwt = JWTManager(app)

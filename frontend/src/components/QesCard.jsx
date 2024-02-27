@@ -152,7 +152,7 @@ const QesCard = ({
               name="postContent"
               rows="4"
               style={{ width: "100%", textAlign: "left" }}
-              placeholder="Please justify your choice"
+              placeholder="Questions to the project team"
               onChange={(e) => feedbackHandler(e)}
             ></textarea>
           )}
