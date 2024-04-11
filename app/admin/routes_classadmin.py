@@ -7,6 +7,7 @@ from functools import wraps
 import pandas as pd
 from flask import request, jsonify, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from sqlalchemy.exc import IntegrityError
 
 from app import db
 from app.admin import admin_bp
@@ -111,22 +112,68 @@ def save_groups(identity, class_code):
         return jsonify(msg="Forbidden"), 403
 
     rows = request.json.get("groups", [])
-    numbers = [r.get("number") for r in rows]
+    if not isinstance(rows, list):
+        return jsonify(msg="groups must be a list"), 400
+
+    normalized = []
+    for i, r in enumerate(rows):
+        if not isinstance(r, dict):
+            return jsonify(msg=f"Invalid row at index {i}"), 400
+        num, name = r.get("number"), r.get("name")
+        if num is None or name is None or not str(name).strip():
+            return jsonify(msg="Each group needs a number and a non-empty name"), 400
+        try:
+            num_int = int(num)
+        except (TypeError, ValueError):
+            return jsonify(msg="Group number must be an integer"), 400
+        raw_id = r.get("id")
+        if raw_id is not None:
+            try:
+                row_id = int(raw_id)
+            except (TypeError, ValueError):
+                return jsonify(msg="Invalid group id"), 400
+        else:
+            row_id = None
+        normalized.append(
+            {"id": row_id, "number": num_int, "name": str(name).strip()}
+        )
+
+    numbers = [x["number"] for x in normalized]
     if len(numbers) != len(set(numbers)):
         return jsonify(msg="Group numbers must be unique within class"), 400
 
-    incoming_ids = {r["id"] for r in rows if r.get("id")}
+    incoming_ids = {x["id"] for x in normalized if x["id"] is not None}
     existing = Group.query.filter_by(class_code=class_code).all()
     for g in existing:
         if g.id not in incoming_ids:
             db.session.delete(g)
 
-    for row in rows:
-        if row.get("id"):
-            g = db.session.get(Group, row["id"])
-            if g:
-                g.number = row["number"]
-                g.name = row["name"]
+    db.session.flush()
+
+    by_id = {}
+    for row in normalized:
+        if row["id"] is None:
+            continue
+        g = db.session.get(Group, row["id"])
+        if not g or g.class_code != class_code:
+            return jsonify(
+                msg="Unknown or out-of-scope group id for this class"
+            ), 400
+        by_id[row["id"]] = g
+
+    # Avoid unique (number, class_code) violations when renumbering (e.g. swaps)
+    for row in normalized:
+        if row["id"] is None:
+            continue
+        by_id[row["id"]].number = -by_id[row["id"]].id
+
+    db.session.flush()
+
+    for row in normalized:
+        if row["id"] is not None:
+            g = by_id[row["id"]]
+            g.number = row["number"]
+            g.name = row["name"]
         else:
             db.session.add(
                 Group(
@@ -136,7 +183,14 @@ def save_groups(identity, class_code):
                 )
             )
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(
+            msg="Could not save groups (duplicate number or data conflict)"
+        ), 400
+
     return jsonify(
         msg="Saved",
         saved_at=datetime.now().strftime("%H:%M %d.%m.%Y")

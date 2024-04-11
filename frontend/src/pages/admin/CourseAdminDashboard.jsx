@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -57,16 +57,21 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
   const [savedAt, setSavedAt] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const classCodeRef = useRef(classCode);
+  classCodeRef.current = classCode;
+  const newRowSeq = useRef(0);
 
   const load = useCallback(async (opts = {}) => {
     const silent = Boolean(opts.silent);
-    if (!classCode || !token) return;
+    const requestedClass = classCode;
+    if (!requestedClass || !token) return;
     if (!silent) {
       setLoading(true);
       setError("");
     }
     try {
-      const data = await dispatch(fetchGroups(token, classCode));
+      const data = await dispatch(fetchGroups(token, requestedClass));
+      if (classCodeRef.current !== requestedClass) return;
       setRows(
         (data || []).map((g) => ({
           id: g.id,
@@ -75,7 +80,9 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
         }))
       );
     } catch (e) {
-      setError(e.message || "Failed to load groups");
+      if (classCodeRef.current === requestedClass) {
+        setError(e.message || "Failed to load groups");
+      }
     } finally {
       if (!silent) {
         setLoading(false);
@@ -93,8 +100,13 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
     );
   };
 
-  const addRow = () =>
-    setRows((prev) => [...prev, { number: "", name: "" }]);
+  const addRow = () => {
+    newRowSeq.current += 1;
+    setRows((prev) => [
+      ...prev,
+      { clientId: `g-new-${newRowSeq.current}`, number: "", name: "" },
+    ]);
+  };
 
   const deleteRow = (idx) =>
     setRows((prev) => prev.filter((_, i) => i !== idx));
@@ -116,6 +128,11 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
     );
     if (bad) {
       setError("Each group needs a number and a non-empty name.");
+      return;
+    }
+    const nums = groups.map((g) => g.number);
+    if (new Set(nums).size !== nums.length) {
+      setError("Group numbers must be unique within the class.");
       return;
     }
     try {
@@ -155,12 +172,20 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
             </thead>
             <tbody>
               {rows.map((row, idx) => (
-                <tr key={row.id ?? `g-${idx}`}>
+                <tr
+                  key={
+                    row.id != null ? `id-${row.id}` : row.clientId || `g-${idx}`
+                  }
+                >
                   <td>{idx + 1}</td>
                   <td>
                     <input
                       type="number"
-                      value={row.number}
+                      value={
+                        row.number === "" || row.number == null
+                          ? ""
+                          : row.number
+                      }
                       onChange={(e) =>
                         updateRow(idx, "number", e.target.value)
                       }
@@ -353,6 +378,12 @@ const Downloads = ({ classCode, token, dispatch }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    setSelected(["rate"]);
+    setError("");
+    setLoading(false);
+  }, [classCode]);
+
   const toggle = (ds) =>
     setSelected((prev) =>
       prev.includes(ds)
@@ -363,19 +394,16 @@ const Downloads = ({ classCode, token, dispatch }) => {
   const options = ["rate", "user", "question_answer"];
 
   const download = async () => {
-    if (!selected.length) return;
+    if (!selected.length || !classCode) return;
     setError("");
     setLoading(true);
+    const cc = classCode;
     try {
-      const res = await dispatch(
-        downloadData(token, classCode, selected)
-      );
+      const res = await dispatch(downloadData(token, cc, selected));
       const blob = await res.blob();
       const name = pickFilename(
         res.headers.get("Content-Disposition"),
-        selected.length > 1
-          ? `r2r_data_${classCode}.zip`
-          : `${selected[0]}.csv`
+        selected.length > 1 ? `r2r_data_${cc}.zip` : `${selected[0]}.csv`
       );
       triggerBlobDownload(blob, name);
     } catch (e) {
@@ -544,12 +572,14 @@ const CourseAdminDashboard = () => {
       {token && selectedClass && classes.includes(selectedClass) && (
         <>
           <GroupsTable
+            key={`groups-${selectedClass}`}
             classCode={selectedClass}
             token={token}
             dispatch={dispatch}
             onSaveSuccess={notifySaveSuccess}
           />
           <QuestionsTable
+            key={`questions-${selectedClass}`}
             classCode={selectedClass}
             token={token}
             dispatch={dispatch}
