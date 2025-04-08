@@ -7,11 +7,19 @@ import os
 
 from flask.helpers import send_from_directory
 
+#added 8.4.25
+uri = os.environ.get("DATABASE_URL_PROD")
+if uri and uri.startswith("postgres://"):
+    uri = uri.replace("postgres://", "postgresql://", 1)
+
 app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
 cors = CORS(app, origins='http://localhost:3000', supports_credentials=True,
             allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST"])
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL_PROD')
+#changed 8.4.25
+#app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL_PROD')
+app.config['SQLALCHEMY_DATABASE_URI'] = uri
+
 app.config['SECRET_KEY'] = 'asdfla234509sdflsdf235'
 app.config["JWT_SECRET_KEY"] = "super-secret"
 app.config['DEBUG'] = True
