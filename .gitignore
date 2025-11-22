@@ -1,0 +1,24 @@
+# Python
+venv/
+*.pyc
+__pycache__/
+
+# Node & frontend
+node_modules/
+frontend/node_modules/
+frontend/build/
+build/
+
+# IDE/OS files
+.DS_Store
+.idea/
+.vscode/
+
+# Database artifacts
+*.db
+*.sqlite
+
+# Logs
+*.log
+
+.env
