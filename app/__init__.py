@@ -5,6 +5,13 @@ from flask_jwt_extended import JWTManager
 import datetime
 import os
 
+# for local dev
+
+from dotenv import load_dotenv
+load_dotenv()
+
+# for local dev end
+
 from flask.helpers import send_from_directory
 
 #added 8.4.25
@@ -13,7 +20,7 @@ if uri and uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
 app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
-cors = CORS(app, origins='http://localhost:3000', supports_credentials=True,
+cors = CORS(app, origins=['http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:5000'], supports_credentials=True,
             allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST"])
 
 #changed 8.4.25
@@ -58,5 +65,5 @@ def serve(path=None):
 
 
 @app.errorhandler(404)
-def not_found():
+def not_found(e):
     return send_from_directory(app.static_folder, 'index.html')
