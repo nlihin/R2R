@@ -7,7 +7,7 @@ class User(db.Model):
     name = db.Column(db.String(length=30), nullable=False, unique=False)
     email_address = db.Column(db.String(length=50), nullable=False, unique=False)
     password = db.Column(db.String(length=60), nullable=False)
-    class_code = db.Column(db.String(length=1024), nullable=False, unique=True)
+    class_code = db.Column(db.String(length=1024), nullable=True, unique=False)
 
     def validate_username(self):
 
@@ -50,6 +50,7 @@ class QuestionAnswer(db.Model):
 class Rate(db.Model):
     username = db.Column(db.String(), nullable=False, primary_key=True)
     group_number = db.Column(db.Integer(), nullable=False, primary_key=True)
+    class_code = db.Column(db.String(), nullable=False, primary_key=True)
     datetime = db.Column(db.DateTime(), nullable=True)
     rate = db.Column(db.Integer(), nullable=False)
     feedback = db.Column(db.String(), nullable=False, primary_key=False)
@@ -68,6 +69,7 @@ class CrowdRating(db.Model):
 class Rank(db.Model):
     username = db.Column(db.String(), nullable=False, primary_key=True)
     date = db.Column(db.Date(), nullable=False, primary_key=True)
+    class_code = db.Column(db.String(), nullable=False, primary_key=True)
     list_rank = db.Column(db.String(length=1024), nullable=True)
     number_questions = db.Column(db.Integer(), nullable=False, default=0)
     experiment_group = db.Column(db.Integer(), nullable=False, default=1)

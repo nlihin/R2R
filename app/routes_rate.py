@@ -32,9 +32,11 @@ def rate_page():
     data = request.json.get('data')
     group_number = data['group_number']
     answer = data['answer']
+    class_code = current_user.class_code
 
     rate = Rate(username=current_user.username,
                 group_number=group_number,
+                class_code=class_code,
                 datetime=datetime.now(),
                 rate=data['rate'],
                 feedback=data['feedback12'])
@@ -50,7 +52,7 @@ def rate_page():
                                 needs_improvement=crowd_ratings['needs_improvement'])
 
     # add only if this rating is not existing in the db
-    exs_rate = Rate.query.filter_by(username=current_user.username,group_number=group_number).first()
+    exs_rate = Rate.query.filter_by(username=current_user.username,group_number=group_number,class_code=class_code).first()
     if not exs_rate:
         db.session.add(rate)
 
@@ -73,12 +75,12 @@ def rate_page():
 
     db.session.commit()
 
-    exs_rank = Rank.query.filter_by(username=current_user.username, date=datetime.today().date()).first()
+    exs_rank = Rank.query.filter_by(username=current_user.username, date=datetime.today().date(),class_code=class_code).first()
     # if users first input insert ranking to db
     if not exs_rank:
         t = [(group_number, rate.rate)]
-        rank = Rank(username=current_user.username, date=datetime.today().date(), list_rank=repr(t))
-        db.session.add(rank)
+        rank_record = Rank(username=current_user.username, date=datetime.today().date(), class_code=class_code, list_rank=repr(t))
+        db.session.add(rank_record)
         db.session.commit()
         return jsonify(status=200, ranking=False)
 
@@ -99,6 +101,7 @@ def rate_page():
     if not flag:
         copy_list_rank.append((int(group_number), data['rate']))
 
-    exs_rank.list_rank = repr(copy_list_rank)
+    exs_rank.list_rank = repr(copy_list_rank) 
+    exs_rank.number_questions = len(copy_list_rank)
     db.session.commit()
     return jsonify(status=200, ranking=False)

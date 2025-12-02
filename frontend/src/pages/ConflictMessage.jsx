@@ -11,7 +11,7 @@ import { BaseURL } from "../routes/url";
 
 const getGroupData = async (groupNum) => {
   const token1 = tokenLoader();
-  
+
   let groupResDate;
   let groupRes = await fetch(`${BaseURL}/rate?group_number=${groupNum}`, {
     method: "GET",
@@ -20,7 +20,7 @@ const getGroupData = async (groupNum) => {
       Accept: "application/json",
       Authorization: "Bearer " + token1,
     },
-    // body: JSON.stringify({ group_number: groupNumInt }),
+        // body: JSON.stringify({ group_number: groupNumInt }),
   });
   // TODO: raise errors to user
   if (groupRes.status === 422 || groupRes.status === 401) {
@@ -76,8 +76,11 @@ const ConflictMessage = ({
     setSecondTempGroups(secondList);
     setThirdTempGroups(thirdList);
     setCurrentIndex(0);
-    displayNameGroup(secondList[0][0]);
-  }, [groups]); //changes
+    
+    if (secondList.length > 0) {
+      displayNameGroup(secondList[0][0]);
+    }
+  }, [groups]);
 
   const finishConflict = async (orderdConflict) => {
     const tok = tokenLoader();
@@ -112,11 +115,12 @@ const ConflictMessage = ({
       finishConflict(orderdConflict, tempNumQus);
     } else {
       setOrderedConflictGroups(orderdConflict);
+      let tempCurIndex = currentIndex + 1;
+      setCurrentIndex(tempCurIndex);
+      if (secondTempGroups[tempCurIndex]) {
+        displayNameGroup(secondTempGroups[tempCurIndex][0]);
+      }
     }
-    let tempCurIndex = currentIndex + 1;
-    setCurrentIndex(tempCurIndex);
-    displayNameGroup(secondTempGroups[tempCurIndex][0]);
-    // setAnswer(false);
   };
   const higherRatings = () => {
     let tempNumQus = numberOfPromp + 1;
@@ -126,11 +130,10 @@ const ConflictMessage = ({
     orderdConflict.push([parseInt(currentGroup), groupRatingsData]);
     orderdConflict = [
       ...orderdConflict,
-      ...secondTempGroups.slice(currentIndex),
+      ...secondTempGroups.slice(currentIndex + 1),
     ];
-    setOrderedConflictGroups(orderdConflict, tempNumQus);
+    setOrderedConflictGroups(orderdConflict);
     finishConflict(orderdConflict, tempNumQus);
-    // setAnswer(true);
   };
   return (
     <div
@@ -144,34 +147,28 @@ const ConflictMessage = ({
     >
       <h2 style={{ color: "#000" }}>
         You gave the same evaluation to<br /> Team
-        {/* {displayNameGroup(secondTempGroups[currentIndex][0])} */}
-        {secondTempGroups?.length > 0 ? (
+        {secondTempGroups?.length > 0 && currentIndex >= 0 ? (
           <span>
             {" "}
-            {secondTempGroups[currentIndex][0]}{": "}
-            {displayConflictNameGroup ? displayConflictNameGroup : ""}
+            {secondTempGroups[currentIndex][0]}: {displayConflictNameGroup}
           </span>
         ) : (
-          "czxczx"
-        )}{" "}<br />
-        and<br /> Team {currentGroup}: {groupName}
+          "Unknown"
+        )}
+        <br />
+        and
+        <br /> Team {currentGroup}: {groupName}
       </h2>
-      <p style={{ color: "#000" }}>
-        Which is better ?<br />
-        {/* {secondTempGroups.length > 0
-          ? secondTempGroups[currentIndex][0]
-          : "czxczx"}{" "}
-        or {currentGroup} */}
-      </p>
+      <p style={{ color: "#000" }}>Which is better ?</p>
       <div className="actionsBtns" style={{ display: "flex" }}>
         <ConflictBtn onClick={() => lowerRatings()}>
-          Team {" "}
-          {secondTempGroups?.length > 0
+          Team{" "}
+          {secondTempGroups?.length > 0 && currentIndex >= 0
             ? secondTempGroups[currentIndex][0]
-            : "czxczx"}
+            : "Unknown"}
         </ConflictBtn>
         <ConflictBtn onClick={() => higherRatings()}>
-          Team{" "}{currentGroup}
+          Team {currentGroup}
         </ConflictBtn>
       </div>
     </div>

@@ -74,6 +74,7 @@ export const action = async ({ request }) => {
       email_address: data.get("email"),
       name: data.get("name"),
       class_code: data.get("class_code"),
+      privacy_consent: data.get("privacy_consent") === "on",
     };
   }
   //console.log(5);
