@@ -75,11 +75,11 @@ def rate_page():
 
     db.session.commit()
 
-    exs_rank = Rank.query.filter_by(username=current_user.username, date=datetime.today().date(),class_code=class_code).first()
+    exs_rank = Rank.query.filter_by(username=current_user.username,class_code=class_code).first()
     # if users first input insert ranking to db
     if not exs_rank:
         t = [(group_number, rate.rate)]
-        rank_record = Rank(username=current_user.username, date=datetime.today().date(), class_code=class_code, list_rank=repr(t))
+        rank_record = Rank(username=current_user.username, date=datetime.today().date(), class_code=class_code, list_rank=repr(t), number_questions=1)
         db.session.add(rank_record)
         db.session.commit()
         return jsonify(status=200, ranking=False)
@@ -102,6 +102,7 @@ def rate_page():
         copy_list_rank.append((int(group_number), data['rate']))
 
     exs_rank.list_rank = repr(copy_list_rank) 
-    exs_rank.number_questions = len(copy_list_rank)
+    exs_rank.number_questions += 1
+    exs_rank.date = datetime.today().date()
     db.session.commit()
     return jsonify(status=200, ranking=False)

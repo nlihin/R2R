@@ -24,7 +24,6 @@ def rank_page():
     
     user_rank = Rank.query.filter_by(
         username=current_user.username,
-        date=today,
         class_code=class_code
     ).first()
     
@@ -57,6 +56,7 @@ def rank_page():
         
         new_questions_count = request.json.get('number_questions', 0)
         user_rank.number_questions += new_questions_count
+        user_rank.date = today
         
         db.session.commit()
         
@@ -65,6 +65,7 @@ def rank_page():
         print(f"  New questions: {new_questions_count}")
         print(f"  Total: {user_rank.number_questions}")
         print(f"  Combined list size: {len(combined_list)}")
+        print(f"  Last updated: {today}")
         
     else:        
         new_rank = Rank(

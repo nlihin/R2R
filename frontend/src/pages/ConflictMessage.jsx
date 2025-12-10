@@ -135,6 +135,15 @@ const ConflictMessage = ({
     setOrderedConflictGroups(orderdConflict);
     finishConflict(orderdConflict, tempNumQus);
   };
+  
+  // if (secondTempGroups.length === 0) {
+  //   return (
+  //     <div style={{ textAlign: "center", color: "#000" }}>
+  //       <h2>No conflicts</h2>
+  //     </div>
+  //   );
+  // }
+
   return (
     <div
       style={{
