@@ -9,11 +9,11 @@ import { json } from "react-router-dom";
 import { ConflictBtn } from "./ConflictMessageStyles";
 import { BaseURL } from "../routes/url";
 
-const getGroupData = async (groupNum) => {
+const getGroupData = async (groupNum, classCode) => {
   const token1 = tokenLoader();
 
   let groupResDate;
-  let groupRes = await fetch(`${BaseURL}/rate?group_number=${groupNum}`, {
+  let groupRes = await fetch(`${BaseURL}/rate?group_number=${groupNum}&class_code=${classCode}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -37,6 +37,7 @@ const ConflictMessage = ({
   groupName,
   groups,
   currentGroup,
+  currentClassCode,
   groupRatingsData,
   isConflicToggle,
 }) => {
@@ -49,8 +50,11 @@ const ConflictMessage = ({
   const [displayConflictNameGroup, setDisplayConflictNameGroup] = useState();
   const [numberOfPromp, setNumberOfPromp] = useState(1);
 
+  const currentGroupKey = `${currentClassCode}:${currentGroup}`;
+
+
   const displayNameGroup = async (groupNum) => {
-    let ConflictNameGroup = await getGroupData(groupNum);
+    let ConflictNameGroup = await getGroupData(groupNum, currentClassCode);
     setDisplayConflictNameGroup(ConflictNameGroup);
   };
 
@@ -78,7 +82,7 @@ const ConflictMessage = ({
     setCurrentIndex(0);
     
     if (secondList.length > 0) {
-      displayNameGroup(secondList[0][0]);
+      displayNameGroup(secondList[0][0]); 
     }
   }, [groups]);
 

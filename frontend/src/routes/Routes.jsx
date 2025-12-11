@@ -18,7 +18,7 @@ const router = createHashRouter([
     children: [
       { index: true, element: <Home /> },
       {
-        path: "groups/:groupId",
+        path: "groups/:classCode/:groupId",
         element: <GroupRatings />,
       },
     ],

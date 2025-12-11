@@ -26,8 +26,12 @@ class User(db.Model):
 class Group(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     number = db.Column(db.Integer(), nullable=False, unique=False)
-    name = db.Column(db.String(length=1024), nullable=False, unique=True)
-    class_code = db.Column(db.String(length=1024), nullable=False, unique=True)
+    name = db.Column(db.String(length=1024), nullable=False, unique=False)
+    class_code = db.Column(db.String(length=1024), nullable=False, unique=False) 
+
+    __table_args__ = (
+        db.UniqueConstraint('number', 'class_code', name='uq_group_number_class'),
+    )
 
 class Class_codes(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
@@ -45,6 +49,7 @@ class QuestionAnswer(db.Model):
     question_number = db.Column(db.Integer(), nullable=False, unique=False)
     answer = db.Column(db.Integer(), nullable=False, unique=False)
     group_number = db.Column(db.Integer(), nullable=True, primary_key=False)
+    class_code = db.Column(db.String(), nullable=False, default='')
 
 
 class Rate(db.Model):
@@ -59,6 +64,7 @@ class Rate(db.Model):
 class CrowdRating(db.Model):
     username = db.Column(db.String(), nullable=False, primary_key=True)
     group_number = db.Column(db.Integer(), nullable=False, primary_key=True)
+    class_code = db.Column(db.String(), nullable=False, primary_key=True) 
     outstanding = db.Column(db.Integer(), nullable=False, primary_key=False)
     very_good = db.Column(db.Integer(), nullable=False, primary_key=False)
     good = db.Column(db.Integer(), nullable=False, primary_key=False)

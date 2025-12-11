@@ -2,14 +2,23 @@ from flask import Blueprint, request, jsonify
 from app import db
 from app.models import Group, Rate, Question, CrowdRating, Rank, QuestionAnswer
 from flask_jwt_extended import current_user, jwt_required
+from flask_cors import cross_origin
 from ast import literal_eval
 from datetime import datetime
 
 rate = Blueprint('rate', __name__)
 
 
+@rate.route('/rate', methods=['OPTIONS'])
+@cross_origin()
+def handle_rate_options():
+    """Handle CORS preflight request"""
+    return jsonify(status=200)
+
+
 @rate.route('/rate', methods=['GET'])
 @jwt_required()
+@cross_origin()
 def get_groups():
     #print(request.url)
     group_number = request.args.get('group_number')
@@ -28,6 +37,7 @@ def get_groups():
 
 @rate.route('/rate', methods=['POST'])
 @jwt_required()
+@cross_origin()
 def rate_page():
     data = request.json.get('data')
     group_number = data['group_number']
@@ -45,6 +55,7 @@ def rate_page():
 
     crowd_ratings = CrowdRating(username=current_user.username,
                                 group_number=group_number,
+                                class_code=class_code,
                                 outstanding=crowd_ratings['outstanding'],
                                 very_good=crowd_ratings['very_good'],
                                 good=crowd_ratings['good'],
@@ -57,7 +68,7 @@ def rate_page():
         db.session.add(rate)
 
     #if this addition exists, don't add again
-    exs_crowd_rating = CrowdRating.query.filter_by(username=current_user.username,group_number=group_number).first()
+    exs_crowd_rating = CrowdRating.query.filter_by(username=current_user.username,group_number=group_number,class_code=class_code).first()
     print(exs_crowd_rating)
     if not exs_crowd_rating:
         db.session.add(crowd_ratings)
@@ -65,12 +76,13 @@ def rate_page():
     # add users answers
     questions_numbers = {q.number for q in Question.query.all()}
     for q_num in questions_numbers:
-        q_exs = QuestionAnswer.query.filter_by(user_id=int(current_user.username), question_number=int(q_num), group_number=group_number).first()
+        q_exs = QuestionAnswer.query.filter_by(user_id=int(current_user.username), question_number=int(q_num), group_number=group_number, ).first()
         if not q_exs:
             q_add = QuestionAnswer(user_id=int(current_user.username),
                                    question_number=int(q_num),
                                    answer=answer[str(q_num)],
-                                   group_number=int(group_number))
+                                   group_number=int(group_number),
+                                   class_code=class_code)
             db.session.add(q_add)
 
     db.session.commit()

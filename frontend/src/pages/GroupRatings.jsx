@@ -45,7 +45,8 @@ const GroupRatings = () => {
 
       const groupNum = params.groupId;
       let groupResData;
-      let groupRes = await fetch(`${BaseURL}/rate?group_number=${groupNum}`, {
+      const classCode = params.classCode; 
+      let groupRes = await fetch(`${BaseURL}/rate?group_number=${groupNum}&class_code=${classCode}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -69,7 +70,7 @@ const GroupRatings = () => {
       setGroupData(groupResData.data);
     };
     getGroupData();
-  }, [params.groupId]);
+  }, [params.groupId, params.classCode]);
 
   const isConflicToggle = () => {
     setIsConflict(false);
@@ -172,6 +173,7 @@ const GroupRatings = () => {
         <ConflictMessage
           groups={dataConflict}
           currentGroup={params.groupId}
+          currentClassCode={params.classCode} 
           groupRatingsData={groupRatingsData}
           isConflicToggle={isConflicToggle}
           groupName={groupData?.group_name}
