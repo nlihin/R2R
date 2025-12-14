@@ -8,6 +8,7 @@ class User(db.Model):
     email_address = db.Column(db.String(length=50), nullable=False, unique=False)
     password = db.Column(db.String(length=60), nullable=False)
     class_code = db.Column(db.String(length=1024), nullable=True, unique=False)
+    confirm = db.Column(db.Boolean(), nullable=False, default=False)
 
     def validate_username(self):
 

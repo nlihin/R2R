@@ -40,12 +40,6 @@ function AuthForm({ modalText, modalToggle }) {
     //for debugging
     console.log("API Response Data:", data);
 
-    if (!isLogin && !privacyConsent) {
-      modalText("You must agree to the Data Processing Agreement to register.");
-      modalToggle(true);
-      return;
-    }
-
     if (reID !== iD) {
       modalText("your IDs don't match, please retry.");
       modalToggle(true);

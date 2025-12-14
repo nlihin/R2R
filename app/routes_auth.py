@@ -13,10 +13,12 @@ auth = Blueprint('auth', __name__)
 @cross_origin()
 #insert user to db
 def register():
+    privacy_consent = request.json.get('privacy_consent', False) 
     new_user = User(username=request.json.get('username'),
                     name=request.json.get('name'),
                     email_address=request.json.get('email_address'),
-                    password=request.json.get('password'))
+                    password=request.json.get('password'),
+                    confirm=privacy_consent)
     if new_user.validate_username() and new_user.validate_password():
         db.session.add(new_user)
         db.session.commit()
