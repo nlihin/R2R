@@ -49,6 +49,7 @@ const ConflictMessage = ({
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [displayConflictNameGroup, setDisplayConflictNameGroup] = useState();
   const [numberOfPromp, setNumberOfPromp] = useState(1);
+  const [conflictStartTime, setConflictStartTime] = useState(new Date());
 
   const currentGroupKey = `${currentClassCode}:${currentGroup}`;
 
@@ -80,11 +81,39 @@ const ConflictMessage = ({
     setSecondTempGroups(secondList);
     setThirdTempGroups(thirdList);
     setCurrentIndex(0);
+    setConflictStartTime(new Date());
     
     if (secondList.length > 0) {
       displayNameGroup(secondList[0][0]); 
     }
   }, [groups]);
+
+
+  const savePairwise = async (selectedGroup, winner) => {
+    const token = tokenLoader();
+    const answerTime = new Date();
+    
+    try {
+      await fetch(BaseURL + 'pairwise', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ' + token,
+        },
+        body: JSON.stringify({
+          class_code: currentClassCode,
+          pairwise_q: `${selectedGroup},${currentGroup}`,
+          answer: winner,
+          ask_time: conflictStartTime.toISOString(),
+          answer_time: answerTime.toISOString(),
+        }),
+      });
+    } catch (error) {
+      console.error('Error saving pairwise:', error);
+    }
+  };
+
 
   const finishConflict = async (orderdConflict) => {
     const tok = tokenLoader();
@@ -108,7 +137,11 @@ const ConflictMessage = ({
     isConflicToggle(false);
   };
 
-  const lowerRatings = () => {
+  const lowerRatings = async () => {
+    const selectedGroup = secondTempGroups[currentIndex][0];
+    await savePairwise(selectedGroup, selectedGroup);
+
+
     let tempNumQus = numberOfPromp + 1;
     setNumberOfPromp(tempNumQus);
     let orderdConflict = orderedConflictGroups;
@@ -121,12 +154,17 @@ const ConflictMessage = ({
       setOrderedConflictGroups(orderdConflict);
       let tempCurIndex = currentIndex + 1;
       setCurrentIndex(tempCurIndex);
+      setConflictStartTime(new Date());
       if (secondTempGroups[tempCurIndex]) {
         displayNameGroup(secondTempGroups[tempCurIndex][0]);
       }
     }
   };
-  const higherRatings = () => {
+  
+  const higherRatings = async () => {
+    const selectedGroup = currentGroup;
+    await savePairwise(secondTempGroups[currentIndex][0], selectedGroup);
+
     let tempNumQus = numberOfPromp + 1;
     setNumberOfPromp(tempNumQus);
     let orderdConflict = orderedConflictGroups;

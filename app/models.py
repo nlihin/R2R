@@ -80,3 +80,12 @@ class Rank(db.Model):
     list_rank = db.Column(db.String(length=1024), nullable=True)
     number_questions = db.Column(db.Integer(), nullable=False, default=0)
     experiment_group = db.Column(db.Integer(), nullable=False, default=1)
+
+class Pairwise(db.Model):
+    id = db.Column(db.Integer(), primary_key=True)
+    class_code = db.Column(db.String(length=50), nullable=False)
+    username = db.Column(db.Integer(), nullable=False)
+    pairwise_q = db.Column(db.String(length=50), nullable=False)
+    answer = db.Column(db.Integer(), nullable=False)
+    ask_time = db.Column(db.DateTime(), nullable=False)
+    answer_time = db.Column(db.DateTime(), nullable=False)

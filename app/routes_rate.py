@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app import db
-from app.models import Group, Rate, Question, CrowdRating, Rank, QuestionAnswer
+from app.models import Group, Rate, Question, CrowdRating, Rank, QuestionAnswer, Pairwise
 from flask_jwt_extended import current_user, jwt_required
 from flask_cors import cross_origin
 from ast import literal_eval
@@ -76,7 +76,7 @@ def rate_page():
     # add users answers
     questions_numbers = {q.number for q in Question.query.all()}
     for q_num in questions_numbers:
-        q_exs = QuestionAnswer.query.filter_by(user_id=int(current_user.username), question_number=int(q_num), group_number=group_number, ).first()
+        q_exs = QuestionAnswer.query.filter_by(user_id=int(current_user.username), question_number=int(q_num), group_number=group_number, class_code=class_code).first()
         if not q_exs:
             q_add = QuestionAnswer(user_id=int(current_user.username),
                                    question_number=int(q_num),
@@ -118,3 +118,32 @@ def rate_page():
     exs_rank.date = datetime.today().date()
     db.session.commit()
     return jsonify(status=200, ranking=False)
+
+
+@rate.route('/pairwise', methods=['POST'])
+@jwt_required()
+@cross_origin()
+def save_pairwise():
+    try:
+        data = request.json
+        
+        ask_time = datetime.fromisoformat(data['ask_time'].replace('Z', '+00:00'))
+        answer_time = datetime.fromisoformat(data['answer_time'].replace('Z', '+00:00'))
+        
+        pairwise = Pairwise(
+            class_code=data['class_code'],
+            username=int(current_user.username),
+            pairwise_q=data['pairwise_q'],
+            answer=data['answer'],
+            ask_time=ask_time,
+            answer_time=answer_time
+        )
+        
+        db.session.add(pairwise)
+        db.session.commit()
+        
+        return jsonify(status=200, msg='Pairwise saved', id=pairwise.id), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(status=400, msg=str(e)), 400
