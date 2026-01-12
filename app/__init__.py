@@ -19,12 +19,23 @@ uri = os.environ.get("DATABASE_URL_PROD")
 if uri and uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
-app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
-cors = CORS(app, origins=['http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:5000'], supports_credentials=True,
-            allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST"])
 
-#changed 8.4.25
-#app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL_PROD')
+app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
+
+CORS(
+    app,
+    origins=[
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:5000',
+        'http://127.0.0.1:5000',
+    ],
+    supports_credentials=True,
+    allow_headers=['Content-Type', 'Authorization'],
+    methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+)
+
+
 app.config['SQLALCHEMY_DATABASE_URI'] = uri
 
 app.config['SECRET_KEY'] = 'asdfla234509sdflsdf235'

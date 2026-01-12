@@ -1,6 +1,4 @@
-import React, { useState } from "react";
-import { useEffect } from "react";
-import { reverseParseGroupsConflict } from "../utlis/parsing";
+import React, { useState, useEffect } from "react";
 // import { conflictsChecks } from "../utlis/conflictsCheckess";
 import { parseGroupsConflict } from "../utlis/parsing";
 import { tokenLoader } from "../utlis/auth";
@@ -12,16 +10,18 @@ import { BaseURL } from "../routes/url";
 const getGroupData = async (groupNum, classCode) => {
   const token1 = tokenLoader();
 
-  let groupResDate;
-  let groupRes = await fetch(`${BaseURL}/rate?group_number=${groupNum}&class_code=${classCode}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Authorization: "Bearer " + token1,
-    },
-        // body: JSON.stringify({ group_number: groupNumInt }),
-  });
+  let groupRes = await fetch(
+    `${BaseURL}/rate?group_number=${groupNum}&class_code=${classCode}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: "Bearer " + token1,
+      },
+              // body: JSON.stringify({ group_number: groupNumInt }),
+    }
+  );
   // TODO: raise errors to user
   if (groupRes.status === 422 || groupRes.status === 401) {
     return groupRes;
@@ -29,7 +29,7 @@ const getGroupData = async (groupNum, classCode) => {
   if (!groupRes.ok) {
     throw json({ message: "Could not authenticate user." }, { status: 500 });
   }
-  groupResDate = await groupRes.json();
+  const groupResDate = await groupRes.json();
   return groupResDate.data.group_name;
 };
 
@@ -41,65 +41,75 @@ const ConflictMessage = ({
   groupRatingsData,
   isConflicToggle,
 }) => {
-  const [convertedGroups, setConvertedGroups] = useState([]);
-  const [firstTempGroups, setFirstTempGroups] = useState([]);
   const [secondTempGroups, setSecondTempGroups] = useState([]);
-  const [thirdTempGroups, setThirdTempGroups] = useState([]);
   const [orderedConflictGroups, setOrderedConflictGroups] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [displayConflictNameGroup, setDisplayConflictNameGroup] = useState();
   const [numberOfPromp, setNumberOfPromp] = useState(1);
   const [conflictStartTime, setConflictStartTime] = useState(new Date());
 
-  const currentGroupKey = `${currentClassCode}:${currentGroup}`;
-
-
   const displayNameGroup = async (groupNum) => {
-    let ConflictNameGroup = await getGroupData(groupNum, currentClassCode);
-    setDisplayConflictNameGroup(ConflictNameGroup);
+    try {
+      let ConflictNameGroup = await getGroupData(groupNum, currentClassCode);
+      setDisplayConflictNameGroup(ConflictNameGroup);
+    } catch (err) {
+      console.error("Error loading group name:", err);
+      setDisplayConflictNameGroup("Unknown");
+    }
   };
 
   useEffect(() => {
-    const convertedGroups = parseGroupsConflict(groups);
-    const firstList = [];
-    const secondList = [];
-    const thirdList = [];
+    console.log("\n[ConflictMessage] USEEFFECT START");
+    console.log(`[ConflictMessage] groups=${JSON.stringify(groups)}`);
+    console.log(`[ConflictMessage] currentGroup=${currentGroup}`);
+    console.log(`[ConflictMessage] groupRatingsData=${groupRatingsData}`);
 
-    for (let i = 0; i < convertedGroups.length; i++) {
-      const [first, second] = convertedGroups[i];
+    const secondList = Array.isArray(groups) ? groups : [];
 
-      if (second === groupRatingsData) {
-        secondList.push([first, second]);
-      } else if (second < groupRatingsData) {
-        thirdList.push([first, second]);
-      } else {
-        firstList.push([first, second]);
-      }
-    }
-    setConvertedGroups(convertedGroups);
-    setFirstTempGroups(firstList);
+    console.log(
+      `[ConflictMessage] secondTempGroups to compare: ${JSON.stringify(
+        secondList
+      )}`
+    );
+
     setSecondTempGroups(secondList);
-    setThirdTempGroups(thirdList);
     setCurrentIndex(0);
     setConflictStartTime(new Date());
-    
-    if (secondList.length > 0) {
-      displayNameGroup(secondList[0][0]); 
-    }
-  }, [groups]);
+    setNumberOfPromp(1);
 
+    if (secondList.length > 0) {
+      console.log(
+        `[ConflictMessage] Loading name for group ${secondList[0]}`
+      );
+      displayNameGroup(secondList[0]);
+    } else {
+      console.log("[ConflictMessage] No groups to compare!");
+    }
+
+    console.log("[ConflictMessage] USEEFFECT END\n");
+  }, [groups, groupRatingsData, currentGroup]);
 
   const savePairwise = async (selectedGroup, winner) => {
     const token = tokenLoader();
     const answerTime = new Date();
-    
+
     try {
-      await fetch(BaseURL + 'pairwise', {
-        method: 'POST',
+      console.log("\n[savePairwise] SAVING:");
+      console.log(
+        `[savePairwise]   pairwise_q="${selectedGroup},${currentGroup}"`
+      );
+      console.log(`[savePairwise]   answer=${winner}`);
+      console.log(
+        `[savePairwise]   ask_time=${conflictStartTime.toISOString()}`
+      );
+      console.log(`[savePairwise]   answer_time=${answerTime.toISOString()}`);
+
+      await fetch(BaseURL + "pairwise", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer ' + token,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: "Bearer " + token,
         },
         body: JSON.stringify({
           class_code: currentClassCode,
@@ -109,82 +119,57 @@ const ConflictMessage = ({
           answer_time: answerTime.toISOString(),
         }),
       });
+
+      console.log("[savePairwise] Saved to DB\n");
     } catch (error) {
-      console.error('Error saving pairwise:', error);
+      console.error("Error saving pairwise:", error);
     }
   };
 
-
-  const finishConflict = async (orderdConflict) => {
-    const tok = tokenLoader();
-
-    let result = [...firstTempGroups, ...orderdConflict, ...thirdTempGroups];
-    const orderedConflict = reverseParseGroupsConflict(result);
-    let payload = {
-      list_rank: orderedConflict,
-      number_questions: numberOfPromp,
-    };
-    let res = await fetch(BaseURL + "rank", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: "Bearer " + tok,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    isConflicToggle(false);
-  };
-
   const lowerRatings = async () => {
-    const selectedGroup = secondTempGroups[currentIndex][0];
-    await savePairwise(selectedGroup, selectedGroup);
+    const selectedGroup = secondTempGroups[currentIndex];
+    console.log(
+      `\n[lowerRatings] User selected: Group ${selectedGroup} (vs currentGroup ${currentGroup})`
+    );
 
+    await savePairwise(selectedGroup, selectedGroup);
 
     let tempNumQus = numberOfPromp + 1;
     setNumberOfPromp(tempNumQus);
-    let orderdConflict = orderedConflictGroups;
+    let orderdConflict = [...orderedConflictGroups];
     orderdConflict.push(secondTempGroups[currentIndex]);
+
     if (currentIndex === secondTempGroups.length - 1) {
-      orderdConflict.push([currentGroup, groupRatingsData]);
-      setOrderedConflictGroups(orderdConflict);
-      finishConflict(orderdConflict, tempNumQus);
+      console.log("[lowerRatings] Last comparison reached, closing conflict");
+      isConflicToggle(false);
     } else {
       setOrderedConflictGroups(orderdConflict);
       let tempCurIndex = currentIndex + 1;
       setCurrentIndex(tempCurIndex);
       setConflictStartTime(new Date());
       if (secondTempGroups[tempCurIndex]) {
-        displayNameGroup(secondTempGroups[tempCurIndex][0]);
+        console.log(
+          `[lowerRatings] Moving to next: Group ${secondTempGroups[tempCurIndex]}`
+        );
+        displayNameGroup(secondTempGroups[tempCurIndex]);
       }
     }
   };
-  
+
   const higherRatings = async () => {
     const selectedGroup = currentGroup;
-    await savePairwise(secondTempGroups[currentIndex][0], selectedGroup);
+    console.log(
+      `\n[higherRatings] User selected: currentGroup ${selectedGroup}`
+    );
+
+    await savePairwise(secondTempGroups[currentIndex], selectedGroup);
 
     let tempNumQus = numberOfPromp + 1;
     setNumberOfPromp(tempNumQus);
-    let orderdConflict = orderedConflictGroups;
 
-    orderdConflict.push([parseInt(currentGroup), groupRatingsData]);
-    orderdConflict = [
-      ...orderdConflict,
-      ...secondTempGroups.slice(currentIndex + 1),
-    ];
-    setOrderedConflictGroups(orderdConflict);
-    finishConflict(orderdConflict, tempNumQus);
+    console.log("[higherRatings] Closing conflict");
+    isConflicToggle(false);
   };
-  
-  // if (secondTempGroups.length === 0) {
-  //   return (
-  //     <div style={{ textAlign: "center", color: "#000" }}>
-  //       <h2>No conflicts</h2>
-  //     </div>
-  //   );
-  // }
 
   return (
     <div
@@ -197,28 +182,25 @@ const ConflictMessage = ({
       }}
     >
       <h2 style={{ color: "#000" }}>
-        You gave the same evaluation to<br /> Team
-        {secondTempGroups?.length > 0 && currentIndex >= 0 ? (
-          <span>
-            {" "}
-            {secondTempGroups[currentIndex][0]}: {displayConflictNameGroup}
-          </span>
-        ) : (
-          "Unknown"
-        )}
+        You gave the same evaluation to
+        <br />
+        Team{" "}
+        {secondTempGroups?.length > 0 && currentIndex >= 0
+          ? `${secondTempGroups[currentIndex]}: ${displayConflictNameGroup}`
+          : "Unknown"}
         <br />
         and
         <br /> Team {currentGroup}: {groupName}
       </h2>
       <p style={{ color: "#000" }}>Which is better ?</p>
       <div className="actionsBtns" style={{ display: "flex" }}>
-        <ConflictBtn onClick={() => lowerRatings()}>
+        <ConflictBtn onClick={lowerRatings}>
           Team{" "}
           {secondTempGroups?.length > 0 && currentIndex >= 0
-            ? secondTempGroups[currentIndex][0]
+            ? secondTempGroups[currentIndex]
             : "Unknown"}
         </ConflictBtn>
-        <ConflictBtn onClick={() => higherRatings()}>
+        <ConflictBtn onClick={higherRatings}>
           Team {currentGroup}
         </ConflictBtn>
       </div>

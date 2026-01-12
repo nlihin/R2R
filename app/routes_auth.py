@@ -1,12 +1,19 @@
-from flask import Blueprint, request, jsonify
-from app.models import User, Class_codes
+from flask import Blueprint, request, jsonify, make_response
+from app.models import User, Class_codes, Rank, RankNew
 from app import db, jwt
 from flask_jwt_extended import create_access_token
-from flask_cors import CORS, cross_origin
-from flask import make_response
+from flask_cors import cross_origin
+
 
 
 auth = Blueprint('auth', __name__)
+
+
+@auth.route('/register', methods=['OPTIONS'])
+@cross_origin()
+def handle_register_options():
+    """Handle CORS preflight request for register"""
+    return jsonify(status=200)
 
 
 @auth.route('/register', methods=['POST'])
@@ -28,15 +35,14 @@ def register():
 
 
 @auth.route('/login', methods=['OPTIONS'])
-def handle_options():
-    response = make_response()
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-    # response.headers.add('Access-Control-Allow-Methods', 'POST')
-    return response
-
 @cross_origin()
+def handle_login_options():
+    """Handle CORS preflight request for login"""
+    return jsonify(status=200)
+
+
 @auth.route("/login", methods=["POST"])
+@cross_origin()
 def login():
     username = request.json.get("username", None)
     password = request.json.get("password", None)

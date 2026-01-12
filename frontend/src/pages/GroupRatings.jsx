@@ -3,17 +3,11 @@ import { Link, useParams, json, useNavigate } from "react-router-dom";
 import { parseGroupsConflict } from "../utlis/parsing";
 
 import BasicModal from "../components/BasicModal";
-// import QesCardTwo from "../components/QesCardTwo";
 import QesCard from "../components/QesCard";
 import ExtraQus from "../components/ExtraQus";
 
 import { tokenLoader } from "../utlis/auth";
 import { BaseURL } from "../routes/url";
-// import {
-//   parseGroupsConflict,
-//   reverseParseGroupsConflict,
-// } from "../utlis/parsing";
-// import { ConflictMessageFunc } from "../utlis/conflictsCheck";
 
 import {
   Warpper,
@@ -22,6 +16,7 @@ import {
   BackButton,
 } from "./GroupRatingsStyles";
 import ConflictMessage from "./ConflictMessage";
+
 
 const GroupRatings = () => {
   const params = useParams();
@@ -45,17 +40,19 @@ const GroupRatings = () => {
 
       const groupNum = params.groupId;
       let groupResData;
-      const classCode = params.classCode; 
-      let groupRes = await fetch(`${BaseURL}/rate?group_number=${groupNum}&class_code=${classCode}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: "Bearer " + token1,
-        },
-
-        // body: JSON.stringify({ group_number: groupNumInt }),
-      });
+      const classCode = params.classCode;
+      let groupRes = await fetch(
+        `${BaseURL}/rate?group_number=${groupNum}&class_code=${classCode}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: "Bearer " + token1,
+          },
+        }
+                // body: JSON.stringify({ group_number: groupNumInt }),
+      );
 
       if (groupRes.status === 422 || groupRes.status === 401) {
         return groupRes;
@@ -72,16 +69,23 @@ const GroupRatings = () => {
     getGroupData();
   }, [params.groupId, params.classCode]);
 
-  const isConflicToggle = () => {
-    setIsConflict(false);
-    navigate("/");
+
+  const isConflicToggle = (toggle) => {
+    console.log("[isConflicToggle] toggle =", toggle);
+    setIsConflict(toggle);
+    
+    if (!toggle) {
+      setTimeout(() => navigate("/"), 500);
+    }
   };
+
 
   const groupDataHandler = (rating, crowdRatings, feedback1) => {
     setGroupRatingsData(rating);
     setCrowdRatingsData(crowdRatings);
-    setFeedback1Data(feedback1)
+    setFeedback1Data(feedback1);
   };
+
 
   const otherQuestionsHandler = (questionNumber, rating) => {
     let otherQuestionsTemp = otherQuestionsData;
@@ -89,23 +93,25 @@ const GroupRatings = () => {
     setOtherQuestionsData({ ...otherQuestionsTemp });
   };
 
+
   const validateGroupRating = () => {
+    if (!crowdRatingsData) {
+      return true; 
+    }
     const totalRating = Object.values(crowdRatingsData).reduce(
       (acc, curr) => acc + curr,
       0
     );
     if (totalRating === 100) return true;
     else if (totalRating > 100) {
-      //TODO: CREATE POPUP FOR RATING FAIL
+            //TODO: CREATE POPUP FOR RATING FAIL
       setModalToggle(true);
       setModalText("Your numbers sum up is over 100. Please fix.");
-
-      // alert("Your numbers sum up is over 100. Please fix.");
+      return false;
     } else {
       setModalToggle(true);
       setModalText("Your numbers don't sum up to 100. Please fix.");
-
-      // alert("Your numbers don't sum up to 100. Please fix.");
+      return false;
     }
   };
   const validateGroupRanking = () => {
@@ -118,7 +124,9 @@ const GroupRatings = () => {
   };
 
   const validateGroup = () => {
-    validateGroupRating() && validateGroupRanking() && submitHandler();
+    if (validateGroupRating() && validateGroupRanking()) {
+      submitHandler();
+    }
   };
   const submitHandler = async () => {
     setIsConflict(false);
@@ -132,38 +140,44 @@ const GroupRatings = () => {
         answer: otherQuestionsData,
       },
     };
-    console.log(ratingBody);
+    console.log("[submitHandler] ratingBody:", ratingBody);
 
-    // TODO: save base url in constants and import
-    let res = await fetch(BaseURL + "rate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: "Bearer " + tok,
-      },
-      body: JSON.stringify(ratingBody),
-    });
-    if (res.status === 422 || res.status === 401) {
-      return res;
-    }
-    if (!res.ok) {
-      throw json({ message: "Could not authenticate user." }, { status: 500 });
-    }
-    const resData = await res.json();
-    if (!resData.ranking) {
-      return navigate("/");
-    }
-    let rankListParsed = parseGroupsConflict(resData?.data?.rank_list);
-    let isConflict = rankListParsed.some(
-      (item) => item[1] === groupRatingsData
-    );
-    if (isConflict) {
-
-      setIsConflict(true);
-      setDataConflict(resData?.data?.rank_list);
-    } else {
-      return navigate("/");
+    try {
+          // TODO: save base url in constants and import
+      let res = await fetch(BaseURL + "rate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: "Bearer " + tok,
+        },
+        body: JSON.stringify(ratingBody),
+      });
+      if (res.status === 422 || res.status === 401) {
+        console.error("[submitHandler] Auth error:", res.status);
+        return res;
+      }
+      if (!res.ok) {
+        throw json({ message: "Could not authenticate user." }, { status: 500 });
+      }
+      const resData = await res.json();
+      console.log("[submitHandler] Response:", resData);
+      if (!resData.ranking) {
+        console.log("[submitHandler] No conflicts, redirecting home");
+        return navigate("/");
+      }
+      let conflictData = resData.conflicts; // Теперь это ARRAY [30, 40]
+      console.log("[submitHandler] Conflicts detected:", conflictData);
+      if (Array.isArray(conflictData) && conflictData.length > 0) {
+        setIsConflict(true);
+        setDataConflict(conflictData);
+      } else {
+        return navigate("/");
+      }
+    } catch (error) {
+      console.error("[submitHandler] Error:", error);
+      setModalToggle(true);
+      setModalText(`Error: ${error.message}`);
     }
   };
   return (
@@ -173,7 +187,7 @@ const GroupRatings = () => {
         <ConflictMessage
           groups={dataConflict}
           currentGroup={params.groupId}
-          currentClassCode={params.classCode} 
+          currentClassCode={params.classCode}
           groupRatingsData={groupRatingsData}
           isConflicToggle={isConflicToggle}
           groupName={groupData?.group_name}

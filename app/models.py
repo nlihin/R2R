@@ -1,4 +1,5 @@
 from app import db
+from datetime import datetime
 
 
 class User(db.Model):
@@ -28,7 +29,7 @@ class Group(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     number = db.Column(db.Integer(), nullable=False, unique=False)
     name = db.Column(db.String(length=1024), nullable=False, unique=False)
-    class_code = db.Column(db.String(length=1024), nullable=False, unique=False) 
+    class_code = db.Column(db.String(length=1024), nullable=False, unique=False)
 
     __table_args__ = (
         db.UniqueConstraint('number', 'class_code', name='uq_group_number_class'),
@@ -65,7 +66,7 @@ class Rate(db.Model):
 class CrowdRating(db.Model):
     username = db.Column(db.String(), nullable=False, primary_key=True)
     group_number = db.Column(db.Integer(), nullable=False, primary_key=True)
-    class_code = db.Column(db.String(), nullable=False, primary_key=True) 
+    class_code = db.Column(db.String(), nullable=False, primary_key=True)
     outstanding = db.Column(db.Integer(), nullable=False, primary_key=False)
     very_good = db.Column(db.Integer(), nullable=False, primary_key=False)
     good = db.Column(db.Integer(), nullable=False, primary_key=False)
@@ -81,7 +82,63 @@ class Rank(db.Model):
     number_questions = db.Column(db.Integer(), nullable=False, default=0)
     experiment_group = db.Column(db.Integer(), nullable=False, default=1)
 
+class RankNew(db.Model):
+
+    __tablename__ = "rank_new"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(255), nullable=False, index=True)
+    class_code = db.Column(db.String(50), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+    items = db.relationship(
+        "RankNewItem",
+        backref="rank_new",
+        cascade="all, delete-orphan",
+        lazy="joined",
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "username",
+            "class_code",
+            name="uq_rank_new_username_class_code",
+        ),
+    )
+
+
+class RankNewItem(db.Model):
+
+    __tablename__ = "rank_new_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    rank_new_id = db.Column(
+        db.Integer,
+        db.ForeignKey("rank_new.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    group_id = db.Column(db.Integer, nullable=False, index=True)
+    rating = db.Column(db.Integer, nullable=False)
+    class_code = db.Column(db.String(50), nullable=False, index=True)
+    position = db.Column(db.Integer, default=1)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "rank_new_id",
+            "group_id",
+            name="uq_rank_item_rank_group",
+        ),
+    )
+
+
 class Pairwise(db.Model):
+
+    __tablename__ = "pairwise"
+
     id = db.Column(db.Integer(), primary_key=True)
     class_code = db.Column(db.String(length=50), nullable=False)
     username = db.Column(db.Integer(), nullable=False)
