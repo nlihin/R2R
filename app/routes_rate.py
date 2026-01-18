@@ -12,8 +12,6 @@ from app.models import (
     CrowdRating,
     QuestionAnswer,
     Pairwise,
-    RankNew,
-    RankNewItem,
 )
 from app.ranking_service import RankingService
 
@@ -30,7 +28,6 @@ def handle_rate_options():
 @jwt_required()
 @cross_origin()
 def get_groups():
-
     group_number = request.args.get("group_number")
     class_code = current_user.class_code
 
@@ -169,6 +166,7 @@ def rate_page():
         db.session.rollback()
         print(f"[rate_page] ERROR: {exc}")
         import traceback
+
         traceback.print_exc()
         return jsonify(status=400, msg=f"Error: {exc}"), 400
 
@@ -191,9 +189,11 @@ def save_pairwise():
         ask_time = datetime.fromisoformat(ask_time_raw.replace("Z", "+00:00"))
         answer_time = datetime.fromisoformat(answer_time_raw.replace("Z", "+00:00"))
 
+        username = str(current_user.username)
+
         row = Pairwise(
             class_code=class_code,
-            username=int(current_user.username),
+            username=int(username),
             pairwise_q=pairwise_q,
             answer=answer,
             ask_time=ask_time,
@@ -202,7 +202,21 @@ def save_pairwise():
         db.session.add(row)
         db.session.commit()
 
-        return jsonify(status=200, msg="Pairwise saved", id=row.id), 200
+        updated_rankings = RankingService.resort_all_ratings_for_user(
+            username=username,
+            class_code=class_code,
+        )
+
+        return jsonify(
+            status=200,
+            msg="Pairwise saved and rankings updated",
+            id=row.id,
+            rankings=updated_rankings,
+        ), 200
     except Exception as exc:
         db.session.rollback()
+        print(f"[save_pairwise] ERROR: {exc}")
+        import traceback
+
+        traceback.print_exc()
         return jsonify(status=400, msg=str(exc)), 400

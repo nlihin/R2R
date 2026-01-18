@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-// import { conflictsChecks } from "../utlis/conflictsCheckess";
 import { parseGroupsConflict } from "../utlis/parsing";
 import { tokenLoader } from "../utlis/auth";
 import { json } from "react-router-dom";
@@ -19,10 +18,9 @@ const getGroupData = async (groupNum, classCode) => {
         Accept: "application/json",
         Authorization: "Bearer " + token1,
       },
-              // body: JSON.stringify({ group_number: groupNumInt }),
     }
   );
-  // TODO: raise errors to user
+
   if (groupRes.status === 422 || groupRes.status === 401) {
     return groupRes;
   }
@@ -47,6 +45,9 @@ const ConflictMessage = ({
   const [displayConflictNameGroup, setDisplayConflictNameGroup] = useState();
   const [numberOfPromp, setNumberOfPromp] = useState(1);
   const [conflictStartTime, setConflictStartTime] = useState(new Date());
+
+  const [isSavingPairwise, setIsSavingPairwise] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   const displayNameGroup = async (groupNum) => {
     try {
@@ -87,11 +88,14 @@ const ConflictMessage = ({
     }
 
     console.log("[ConflictMessage] USEEFFECT END\n");
-  }, [groups, groupRatingsData, currentGroup]);
+  }, [groups, groupRatingsData, currentGroup, currentClassCode]);
 
   const savePairwise = async (selectedGroup, winner) => {
     const token = tokenLoader();
     const answerTime = new Date();
+
+    setIsSavingPairwise(true);
+    setSaveError(null);
 
     try {
       console.log("\n[savePairwise] SAVING:");
@@ -104,7 +108,7 @@ const ConflictMessage = ({
       );
       console.log(`[savePairwise]   answer_time=${answerTime.toISOString()}`);
 
-      await fetch(BaseURL + "pairwise", {
+      const response = await fetch(BaseURL + "pairwise", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -120,9 +124,26 @@ const ConflictMessage = ({
         }),
       });
 
-      console.log("[savePairwise] Saved to DB\n");
+      if (!response.ok) {
+        let errorText = "Error saving pairwise";
+        try {
+          const errorData = await response.json();
+          errorText = errorData.msg || errorText;
+        } catch (_) {}
+        throw new Error(errorText);
+      }
+
+      const data = await response.json();
+      console.log("[savePairwise] Saved to DB\n", data);
+
+
+      setIsSavingPairwise(false);
+      return true;
     } catch (error) {
       console.error("Error saving pairwise:", error);
+      setSaveError(error.message || "Error saving pairwise");
+      setIsSavingPairwise(false);
+      return false;
     }
   };
 
@@ -132,7 +153,11 @@ const ConflictMessage = ({
       `\n[lowerRatings] User selected: Group ${selectedGroup} (vs currentGroup ${currentGroup})`
     );
 
-    await savePairwise(selectedGroup, selectedGroup);
+    const saved = await savePairwise(selectedGroup, selectedGroup);
+    if (!saved) {
+      console.log("[lowerRatings] savePairwise failed, stay on current conflict");
+      return;
+    }
 
     let tempNumQus = numberOfPromp + 1;
     setNumberOfPromp(tempNumQus);
@@ -162,13 +187,22 @@ const ConflictMessage = ({
       `\n[higherRatings] User selected: currentGroup ${selectedGroup}`
     );
 
-    await savePairwise(secondTempGroups[currentIndex], selectedGroup);
+    const saved = await savePairwise(secondTempGroups[currentIndex], selectedGroup);
+    if (!saved) {
+      console.log("[higherRatings] savePairwise failed, stay on current conflict");
+      return;
+    }
 
     let tempNumQus = numberOfPromp + 1;
     setNumberOfPromp(tempNumQus);
 
     console.log("[higherRatings] Closing conflict");
     isConflicToggle(false);
+  };
+
+  const disabledStyle = {
+    opacity: isSavingPairwise ? 0.5 : 1,
+    cursor: isSavingPairwise ? "not-allowed" : "pointer",
   };
 
   return (
@@ -193,15 +227,33 @@ const ConflictMessage = ({
         <br /> Team {currentGroup}: {groupName}
       </h2>
       <p style={{ color: "#000" }}>Which is better ?</p>
+
+      {saveError && (
+        <p style={{ color: "red" }}>
+          {saveError}
+        </p>
+      )}
+
       <div className="actionsBtns" style={{ display: "flex" }}>
-        <ConflictBtn onClick={lowerRatings}>
-          Team{" "}
-          {secondTempGroups?.length > 0 && currentIndex >= 0
-            ? secondTempGroups[currentIndex]
-            : "Unknown"}
+        <ConflictBtn
+          onClick={lowerRatings}
+          disabled={isSavingPairwise}
+          style={disabledStyle}
+        >
+          {isSavingPairwise
+            ? "Saving..."
+            : `Team ${
+                secondTempGroups?.length > 0 && currentIndex >= 0
+                  ? secondTempGroups[currentIndex]
+                  : "Unknown"
+              }`}
         </ConflictBtn>
-        <ConflictBtn onClick={higherRatings}>
-          Team {currentGroup}
+        <ConflictBtn
+          onClick={higherRatings}
+          disabled={isSavingPairwise}
+          style={disabledStyle}
+        >
+          {isSavingPairwise ? "Saving..." : `Team ${currentGroup}`}
         </ConflictBtn>
       </div>
     </div>
