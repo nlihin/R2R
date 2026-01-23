@@ -8,7 +8,8 @@ import os
 from flask.helpers import send_from_directory
 
 #added 8.4.25
-uri = os.environ.get("DATABASE_URL_PROD")
+#added the or in the next line 23.1.2026
+uri = os.environ.get("DATABASE_URL_PROD") or os.environ.get("DATABASE_URL")
 if uri and uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
@@ -58,5 +59,6 @@ def serve(path=None):
 
 
 @app.errorhandler(404)
-def not_found():
+#def not_found(): #changed 23.1.2026
+def not_found(error):
     return send_from_directory(app.static_folder, 'index.html')
