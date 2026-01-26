@@ -9,7 +9,7 @@ from flask.helpers import send_from_directory
 
 #added 8.4.25
 #added the or in the next line 23.1.2026
-uri = os.environ.get("DATABASE_URL_PROD") or os.environ.get("DATABASE_URL")
+uri = os.environ.get("DATABASE_URL")
 if uri and uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
