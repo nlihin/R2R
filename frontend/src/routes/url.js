@@ -1,5 +1,5 @@
 //changed 25.1.2026
-export const BaseURL = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/?$/, "/");q
+export const BaseURL = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/?$/, "/");
 
 //export const BaseURL = "https://rate2rank-0d561bf6674a.herokuapp.com/";
 //export const BaseURL = "";
