@@ -5,37 +5,20 @@ from flask_jwt_extended import JWTManager
 import datetime
 import os
 
-# for local dev
-
-from dotenv import load_dotenv
-load_dotenv()
-
-# for local dev end
-
 from flask.helpers import send_from_directory
 
 #added 8.4.25
-uri = os.environ.get("DATABASE_URL_PROD")
+#added the or in the next line 23.1.2026
+uri = os.environ.get("DATABASE_URL")
 if uri and uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
-
 app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
+cors = CORS(app, origins='http://localhost:3000', supports_credentials=True,
+            allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST"])
 
-CORS(
-    app,
-    origins=[
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        'http://localhost:5000',
-        'http://127.0.0.1:5000',
-    ],
-    supports_credentials=True,
-    allow_headers=['Content-Type', 'Authorization'],
-    methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-)
-
-
+#changed 8.4.25
+#app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL_PROD')
 app.config['SQLALCHEMY_DATABASE_URI'] = uri
 
 app.config['SECRET_KEY'] = 'asdfla234509sdflsdf235'
@@ -76,5 +59,6 @@ def serve(path=None):
 
 
 @app.errorhandler(404)
-def not_found(e):
+#def not_found(): #changed 23.1.2026
+def not_found(error):
     return send_from_directory(app.static_folder, 'index.html')
