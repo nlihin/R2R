@@ -89,70 +89,7 @@ const PrivacyModal = ({ isOpen, onClose }) => {
         <ModalHeader>Data Processing Agreement</ModalHeader>
         <ModalBody>
           <p>
-            TEXT TEXT TEXT Lorem ipsum dolor sit amet consectetur adipisicing
-            elit. Rem similique perspiciatis libero eius, officia repellendus
-            laborum nulla blanditiis obcaecati! Ut odio iusto nisi aliquid.
-            Culpa quo voluptatibus dicta ducimus officiis?
-          </p>
-
-          <h3>1. Introduction</h3>
-          <p>
-            TEXT TEXT TEXT Lorem ipsum dolor sit amet consectetur adipisicing
-            elit. Rem similique perspiciatis libero eius, officia repellendus
-            laborum nulla blanditiis obcaecati! Ut odio iusto nisi aliquid.
-            Culpa quo voluptatibus dicta ducimus officiis?
-          </p>
-
-          <h3>2. Personal Data Collected</h3>
-          <p>
-            {" "}
-            TEXT TEXT TEXT Lorem ipsum dolor sit amet consectetur adipisicing
-            elit. Rem similique perspiciatis libero eius, officia repellendus
-            laborum nulla blanditiis obcaecati! Ut odio iusto nisi aliquid.
-            Culpa quo voluptatibus dicta ducimus officiis?
-          </p>
-          <ul>
-            <li>Identification information (name, ID number, email address)</li>
-            <li>Educational information (class code, assessment results)</li>
-            <li>Technical information (IP address, login timestamps)</li>
-            <li>Survey and feedback responses</li>
-            <li>Performance analytics and behavioral data</li>
-          </ul>
-
-          <h3>3. Purposes of Processing</h3>
-          <p>
-            TEXT TEXT TEXT Lorem ipsum dolor sit amet consectetur adipisicing
-            elit. Rem similique perspiciatis libero eius, officia repellendus
-            laborum nulla blanditiis obcaecati! Ut odio iusto nisi aliquid.
-            Culpa quo voluptatibus dicta ducimus officiis?
-          </p>
-
-          <h3>4. Data Security</h3>
-          <p>
-            TEXT TEXT TEXT Lorem ipsum dolor sit amet consectetur adipisicing
-            elit. Rem similique perspiciatis libero eius, officia repellendus
-            laborum nulla blanditiis obcaecati! Ut odio iusto nisi aliquid.
-            Culpa quo voluptatibus dicta ducimus officiis? TEXT TEXT TEXT Lorem
-            ipsum dolor sit amet consectetur adipisicing elit. Rem similique
-            perspiciatis libero eius, officia repellendus laborum nulla
-            blanditiis obcaecati! Ut odio iusto nisi aliquid. Culpa quo
-            voluptatibus dicta ducimus officiis? TEXT TEXT TEXT Lorem ipsum
-            dolor sit amet consectetur adipisicing elit. Rem similique
-            perspiciatis libero eius, officia repellendus laborum nulla
-            blanditiis obcaecati! Ut odio iusto nisi aliquid. Culpa quo
-            voluptatibus dicta ducimus officiis? TEXT TEXT TEXT Lorem ipsum
-            dolor sit amet consectetur adipisicing elit. Rem similique
-            perspiciatis libero eius, officia repellendus laborum nulla
-            blanditiis obcaecati! Ut odio iusto nisi aliquid. Culpa quo
-            voluptatibus dicta ducimus officiis? TEXT TEXT TEXT Lorem ipsum
-            dolor sit amet consectetur adipisicing elit. Rem similique
-            perspiciatis libero eius, officia repellendus laborum nulla
-            blanditiis obcaecati! Ut odio iusto nisi aliquid. Culpa quo
-            voluptatibus dicta ducimus officiis? TEXT TEXT TEXT Lorem ipsum
-            dolor sit amet consectetur adipisicing elit. Rem similique
-            perspiciatis libero eius, officia repellendus laborum nulla
-            blanditiis obcaecati! Ut odio iusto nisi aliquid. Culpa quo
-            voluptatibus dicta ducimus officiis?
+          This application is intended for course activities and academic research on peer assessment. Your email address and identification number will be used solely for grading purposes. They will not be stored or included in the research data. Your email address may be used once for technical clarification if necessary. All other data collected through the application will be anonymized and may be used for research purposes. Participation in the research component is voluntary and will not affect your course grade. By selecting “I agree,” you consent to the use of your anonymized data for research.
           </p>
         </ModalBody>
         <ModalFooter>
