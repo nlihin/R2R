@@ -28,11 +28,36 @@ const GroupRatings = () => {
   const [otherQuestionsData, setOtherQuestionsData] = useState({});
   const [isConflict, setIsConflict] = useState(false);
   const [dataConflict, setDataConflict] = useState();
+  const [currentConflictIndex, setCurrentConflictIndex] = useState(0);
   // const [questions, setQuestions] = useState(["hey", "roi", "yoni"]);
   const [modalToggle, setModalToggle] = useState(false);
   const [modalText, setModalText] = useState();
 
   // const titles = ["גרוע", "לא טוב", "בינוני", "טוב", "מצוין"];
+
+  const conflictStorageKey = `r2r_pairwise_conflict_${params.classCode}_${params.groupId}`;
+
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(conflictStorageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const groups = Array.isArray(parsed.groups) ? parsed.groups : [];
+        const idx =
+          typeof parsed.currentIndex === "number" ? parsed.currentIndex : 0;
+        if (groups.length > 0) {
+          setIsConflict(true);
+          setDataConflict(groups);
+          setCurrentConflictIndex(idx);
+        }
+      } catch (e) {
+        console.error("[GroupRatings] Failed to parse conflict from storage:", e);
+        window.localStorage.removeItem(conflictStorageKey);
+      }
+    }
+  }, [conflictStorageKey]);
+
 
   useEffect(() => {
     const getGroupData = async () => {
@@ -75,6 +100,7 @@ const GroupRatings = () => {
     setIsConflict(toggle);
     
     if (!toggle) {
+      window.localStorage.removeItem(conflictStorageKey);
       setTimeout(() => navigate("/"), 500);
     }
   };
@@ -164,14 +190,22 @@ const GroupRatings = () => {
       console.log("[submitHandler] Response:", resData);
       if (!resData.ranking) {
         console.log("[submitHandler] No conflicts, redirecting home");
+        window.localStorage.removeItem(conflictStorageKey);
         return navigate("/");
       }
-      let conflictData = resData.conflicts; // Теперь это ARRAY [30, 40]
+      let conflictData = resData.conflicts;
       console.log("[submitHandler] Conflicts detected:", conflictData);
       if (Array.isArray(conflictData) && conflictData.length > 0) {
         setIsConflict(true);
         setDataConflict(conflictData);
+        setCurrentConflictIndex(0);
+        const payload = {
+          groups: conflictData,
+          currentIndex: 0,
+        };
+        window.localStorage.setItem(conflictStorageKey, JSON.stringify(payload));
       } else {
+        window.localStorage.removeItem(conflictStorageKey);
         return navigate("/");
       }
     } catch (error) {
@@ -191,6 +225,9 @@ const GroupRatings = () => {
           groupRatingsData={groupRatingsData}
           isConflicToggle={isConflicToggle}
           groupName={groupData?.group_name}
+          conflictStorageKey={conflictStorageKey}
+          initialIndex={currentConflictIndex}
+          onIndexChange={setCurrentConflictIndex}
         />
       )}
       {!isConflict && (

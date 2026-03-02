@@ -38,10 +38,13 @@ const ConflictMessage = ({
   currentClassCode,
   groupRatingsData,
   isConflicToggle,
+  conflictStorageKey,
+  initialIndex = 0,
+  onIndexChange,
 }) => {
   const [secondTempGroups, setSecondTempGroups] = useState([]);
   const [orderedConflictGroups, setOrderedConflictGroups] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(-1);
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [displayConflictNameGroup, setDisplayConflictNameGroup] = useState();
   const [numberOfPromp, setNumberOfPromp] = useState(1);
   const [conflictStartTime, setConflictStartTime] = useState(new Date());
@@ -65,7 +68,28 @@ const ConflictMessage = ({
     console.log(`[ConflictMessage] currentGroup=${currentGroup}`);
     console.log(`[ConflictMessage] groupRatingsData=${groupRatingsData}`);
 
-    const secondList = Array.isArray(groups) ? groups : [];
+
+    let secondList = [];
+
+    if (groups && groups.length > 0) {
+      secondList = groups;
+    } else {
+      const saved = window.localStorage.getItem(conflictStorageKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          secondList = Array.isArray(parsed.groups) ? parsed.groups : [];
+          const savedIndex =
+            typeof parsed.currentIndex === "number" ? parsed.currentIndex : 0;
+          setCurrentIndex(savedIndex);
+        } catch (e) {
+          console.error(
+            "[ConflictMessage] Failed to parse saved conflict:",
+            e
+          );
+        }
+      }
+    }
 
     console.log(
       `[ConflictMessage] secondTempGroups to compare: ${JSON.stringify(
@@ -74,21 +98,35 @@ const ConflictMessage = ({
     );
 
     setSecondTempGroups(secondList);
-    setCurrentIndex(0);
-    setConflictStartTime(new Date());
+    const start = new Date();
+    setConflictStartTime(start);
     setNumberOfPromp(1);
 
-    if (secondList.length > 0) {
+
+    if (secondList.length > 0 && currentIndex >= 0) {
       console.log(
-        `[ConflictMessage] Loading name for group ${secondList[0]}`
+        `[ConflictMessage] Loading name for group ${secondList[currentIndex]}`
       );
+      displayNameGroup(secondList[currentIndex]);
+    } else if (secondList.length > 0) {
+      console.log(
+        `[ConflictMessage] Loading name for group ${secondList[0]} (fallback)`
+      );
+      setCurrentIndex(0);
       displayNameGroup(secondList[0]);
     } else {
       console.log("[ConflictMessage] No groups to compare!");
     }
 
     console.log("[ConflictMessage] USEEFFECT END\n");
-  }, [groups, groupRatingsData, currentGroup, currentClassCode]);
+  }, [
+    groups,
+    groupRatingsData,
+    currentGroup,
+    currentClassCode,
+    conflictStorageKey,
+  ]);
+
 
   const savePairwise = async (selectedGroup, winner) => {
     const token = tokenLoader();
@@ -171,7 +209,19 @@ const ConflictMessage = ({
       setOrderedConflictGroups(orderdConflict);
       let tempCurIndex = currentIndex + 1;
       setCurrentIndex(tempCurIndex);
-      setConflictStartTime(new Date());
+      if (typeof onIndexChange === "function") {
+        onIndexChange(tempCurIndex);
+        const payload = {
+          groups: secondTempGroups,
+          currentIndex: tempCurIndex,
+        };
+        window.localStorage.setItem(
+          conflictStorageKey,
+          JSON.stringify(payload)
+        );
+      }
+      const newStart = new Date();
+      setConflictStartTime(newStart);
       if (secondTempGroups[tempCurIndex]) {
         console.log(
           `[lowerRatings] Moving to next: Group ${secondTempGroups[tempCurIndex]}`
