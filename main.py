@@ -1,5 +1,7 @@
 from app import app, db
-from app.models import User,Group,Question
+from app.models import User, Group, Question
+import os
+
 
 if __name__ == '__main__':
     app.app_context().push()
@@ -24,7 +26,7 @@ if __name__ == '__main__':
     # db.session.add(Question(number=4, description='some Question test 4 '))
     #
     # db.session.commit()
-    app.run()
 
+    port = 5001 if os.getenv("APP_ENV", "local") == "local" else 5000
 
-
+    app.run(host="0.0.0.0", port=port, debug=True)

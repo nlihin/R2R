@@ -9,13 +9,24 @@ from flask.helpers import send_from_directory
 
 #added 8.4.25
 #added the or in the next line 23.1.2026
+APP_ENV = os.getenv("APP_ENV", "local")
 uri = os.environ.get("DATABASE_URL")
+if APP_ENV == "local" and not uri:
+    uri = "postgresql://postgres:postgres@localhost:5432/r2r_dev"
 if uri and uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
 app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
-cors = CORS(app, origins='http://localhost:3000', supports_credentials=True,
-            allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST"])
+
+# NEW: origins берём из переменной окружения CORS_ORIGINS, по умолчанию localhost:3000
+origins = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+cors = CORS(
+    app,
+    origins=origins,
+    supports_credentials=True,
+    allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "OPTIONS"]
+)
 
 #changed 8.4.25
 #app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL_PROD')
