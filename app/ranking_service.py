@@ -311,6 +311,11 @@ class RankingService:
 
         conflicts_to_show = [gid for gid in sorted_ids if gid != group_id]
 
+        conflicts_to_show.sort(
+            key=lambda gid: table.get(gid, {}).get("position", 9999)
+        )
+
+
         print(f"[ADD_GROUP] RETURNING: conflicts={conflicts_to_show}")
         print("=" * 100 + "\n")
 

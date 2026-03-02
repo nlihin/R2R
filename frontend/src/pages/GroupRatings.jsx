@@ -28,7 +28,8 @@ const GroupRatings = () => {
   const [otherQuestionsData, setOtherQuestionsData] = useState({});
   const [isConflict, setIsConflict] = useState(false);
   const [dataConflict, setDataConflict] = useState();
-  const [currentConflictIndex, setCurrentConflictIndex] = useState(0);
+  const [conflictLow, setConflictLow] = useState(0);
+  const [conflictHigh, setConflictHigh] = useState(-1);
   // const [questions, setQuestions] = useState(["hey", "roi", "yoni"]);
   const [modalToggle, setModalToggle] = useState(false);
   const [modalText, setModalText] = useState();
@@ -44,12 +45,16 @@ const GroupRatings = () => {
       try {
         const parsed = JSON.parse(saved);
         const groups = Array.isArray(parsed.groups) ? parsed.groups : [];
-        const idx =
-          typeof parsed.currentIndex === "number" ? parsed.currentIndex : 0;
-        if (groups.length > 0) {
+        const savedLow = typeof parsed.low === "number" ? parsed.low : 0;
+        const savedHigh =
+          typeof parsed.high === "number" ? parsed.high : groups.length - 1;
+        if (groups.length > 0 && savedLow <= savedHigh) {
           setIsConflict(true);
           setDataConflict(groups);
-          setCurrentConflictIndex(idx);
+          setConflictLow(savedLow);
+          setConflictHigh(savedHigh);
+        } else {
+          window.localStorage.removeItem(conflictStorageKey);
         }
       } catch (e) {
         console.error("[GroupRatings] Failed to parse conflict from storage:", e);
@@ -103,6 +108,12 @@ const GroupRatings = () => {
       window.localStorage.removeItem(conflictStorageKey);
       setTimeout(() => navigate("/"), 500);
     }
+  };
+
+
+  const handleBoundsChange = (newLow, newHigh) => {
+    setConflictLow(newLow);
+    setConflictHigh(newHigh);
   };
 
 
@@ -198,10 +209,12 @@ const GroupRatings = () => {
       if (Array.isArray(conflictData) && conflictData.length > 0) {
         setIsConflict(true);
         setDataConflict(conflictData);
-        setCurrentConflictIndex(0);
+        setConflictLow(0);
+        setConflictHigh(conflictData.length - 1);
         const payload = {
           groups: conflictData,
-          currentIndex: 0,
+          low: 0,
+          high: conflictData.length - 1,
         };
         window.localStorage.setItem(conflictStorageKey, JSON.stringify(payload));
       } else {
@@ -226,8 +239,9 @@ const GroupRatings = () => {
           isConflicToggle={isConflicToggle}
           groupName={groupData?.group_name}
           conflictStorageKey={conflictStorageKey}
-          initialIndex={currentConflictIndex}
-          onIndexChange={setCurrentConflictIndex}
+          initialLow={conflictLow}
+          initialHigh={conflictHigh}
+          onBoundsChange={handleBoundsChange}
         />
       )}
       {!isConflict && (

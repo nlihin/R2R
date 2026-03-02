@@ -39,18 +39,22 @@ const ConflictMessage = ({
   groupRatingsData,
   isConflicToggle,
   conflictStorageKey,
-  initialIndex = 0,
-  onIndexChange,
+  initialLow,
+  initialHigh,
+  onBoundsChange,
 }) => {
   const [secondTempGroups, setSecondTempGroups] = useState([]);
-  const [orderedConflictGroups, setOrderedConflictGroups] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [low, setLow] = useState(typeof initialLow === "number" ? initialLow : 0);
+  const [high, setHigh] = useState(typeof initialHigh === "number" ? initialHigh : -1);
   const [displayConflictNameGroup, setDisplayConflictNameGroup] = useState();
-  const [numberOfPromp, setNumberOfPromp] = useState(1);
   const [conflictStartTime, setConflictStartTime] = useState(new Date());
+
 
   const [isSavingPairwise, setIsSavingPairwise] = useState(false);
   const [saveError, setSaveError] = useState(null);
+
+  const mid = low <= high ? Math.floor((low + high) / 2) : -1;
+
 
   const displayNameGroup = async (groupNum) => {
     try {
@@ -66,7 +70,6 @@ const ConflictMessage = ({
     console.log("\n[ConflictMessage] USEEFFECT START");
     console.log(`[ConflictMessage] groups=${JSON.stringify(groups)}`);
     console.log(`[ConflictMessage] currentGroup=${currentGroup}`);
-    console.log(`[ConflictMessage] groupRatingsData=${groupRatingsData}`);
 
 
     let secondList = [];
@@ -79,53 +82,35 @@ const ConflictMessage = ({
         try {
           const parsed = JSON.parse(saved);
           secondList = Array.isArray(parsed.groups) ? parsed.groups : [];
-          const savedIndex =
-            typeof parsed.currentIndex === "number" ? parsed.currentIndex : 0;
-          setCurrentIndex(savedIndex);
+          if (typeof parsed.low === "number") setLow(parsed.low);
+          if (typeof parsed.high === "number") setHigh(parsed.high);
         } catch (e) {
-          console.error(
-            "[ConflictMessage] Failed to parse saved conflict:",
-            e
-          );
+          console.error("[ConflictMessage] Failed to parse saved conflict:", e);
         }
       }
     }
 
-    console.log(
-      `[ConflictMessage] secondTempGroups to compare: ${JSON.stringify(
-        secondList
-      )}`
-    );
 
     setSecondTempGroups(secondList);
-    const start = new Date();
-    setConflictStartTime(start);
-    setNumberOfPromp(1);
 
-
-    if (secondList.length > 0 && currentIndex >= 0) {
-      console.log(
-        `[ConflictMessage] Loading name for group ${secondList[currentIndex]}`
+    if (secondList.length > 0) {
+      if (high < 0) {
+        setHigh(secondList.length - 1);
+      }
+      const startMid = Math.floor(
+        ((typeof initialLow === "number" ? initialLow : 0) +
+          (typeof initialHigh === "number" && initialHigh >= 0
+            ? initialHigh
+            : secondList.length - 1)) /
+          2
       );
-      displayNameGroup(secondList[currentIndex]);
-    } else if (secondList.length > 0) {
-      console.log(
-        `[ConflictMessage] Loading name for group ${secondList[0]} (fallback)`
-      );
-      setCurrentIndex(0);
-      displayNameGroup(secondList[0]);
-    } else {
-      console.log("[ConflictMessage] No groups to compare!");
+      console.log(`[ConflictMessage] Loading name for group ${secondList[startMid]}`);
+      displayNameGroup(secondList[startMid]);
     }
 
+    setConflictStartTime(new Date());
     console.log("[ConflictMessage] USEEFFECT END\n");
-  }, [
-    groups,
-    groupRatingsData,
-    currentGroup,
-    currentClassCode,
-    conflictStorageKey,
-  ]);
+  }, [groups, currentGroup, currentClassCode, conflictStorageKey]);
 
 
   const savePairwise = async (selectedGroup, winner) => {
@@ -137,13 +122,9 @@ const ConflictMessage = ({
 
     try {
       console.log("\n[savePairwise] SAVING:");
-      console.log(
-        `[savePairwise]   pairwise_q="${selectedGroup},${currentGroup}"`
-      );
+      console.log(`[savePairwise]   pairwise_q="${selectedGroup},${currentGroup}"`);
       console.log(`[savePairwise]   answer=${winner}`);
-      console.log(
-        `[savePairwise]   ask_time=${conflictStartTime.toISOString()}`
-      );
+      console.log(`[savePairwise]   ask_time=${conflictStartTime.toISOString()}`);
       console.log(`[savePairwise]   answer_time=${answerTime.toISOString()}`);
 
       const response = await fetch(BaseURL + "pairwise", {
@@ -186,10 +167,11 @@ const ConflictMessage = ({
   };
 
   const lowerRatings = async () => {
-    const selectedGroup = secondTempGroups[currentIndex];
+    const selectedGroup = secondTempGroups[mid];
     console.log(
       `\n[lowerRatings] User selected: Group ${selectedGroup} (vs currentGroup ${currentGroup})`
     );
+    console.log(`[lowerRatings] Binary search state: low=${low}, high=${high}, mid=${mid}`);
 
     const saved = await savePairwise(selectedGroup, selectedGroup);
     if (!saved) {
@@ -197,37 +179,29 @@ const ConflictMessage = ({
       return;
     }
 
-    let tempNumQus = numberOfPromp + 1;
-    setNumberOfPromp(tempNumQus);
-    let orderdConflict = [...orderedConflictGroups];
-    orderdConflict.push(secondTempGroups[currentIndex]);
 
-    if (currentIndex === secondTempGroups.length - 1) {
-      console.log("[lowerRatings] Last comparison reached, closing conflict");
+    const newLow = mid + 1;
+    setLow(newLow);
+    setConflictStartTime(new Date());
+
+    console.log(`[lowerRatings] New bounds: low=${newLow}, high=${high}`);
+
+    if (newLow > high) {
+      console.log("[lowerRatings] Binary search complete, closing conflict");
       isConflicToggle(false);
     } else {
-      setOrderedConflictGroups(orderdConflict);
-      let tempCurIndex = currentIndex + 1;
-      setCurrentIndex(tempCurIndex);
-      if (typeof onIndexChange === "function") {
-        onIndexChange(tempCurIndex);
+      const newMid = Math.floor((newLow + high) / 2);
+      if (typeof onBoundsChange === "function") {
+        onBoundsChange(newLow, high);
         const payload = {
           groups: secondTempGroups,
-          currentIndex: tempCurIndex,
+          low: newLow,
+          high: high,
         };
-        window.localStorage.setItem(
-          conflictStorageKey,
-          JSON.stringify(payload)
-        );
+        window.localStorage.setItem(conflictStorageKey, JSON.stringify(payload));
       }
-      const newStart = new Date();
-      setConflictStartTime(newStart);
-      if (secondTempGroups[tempCurIndex]) {
-        console.log(
-          `[lowerRatings] Moving to next: Group ${secondTempGroups[tempCurIndex]}`
-        );
-        displayNameGroup(secondTempGroups[tempCurIndex]);
-      }
+      console.log(`[lowerRatings] Next comparison: groups[${newMid}] = ${secondTempGroups[newMid]}`);
+      displayNameGroup(secondTempGroups[newMid]);
     }
   };
 
@@ -236,18 +210,38 @@ const ConflictMessage = ({
     console.log(
       `\n[higherRatings] User selected: currentGroup ${selectedGroup}`
     );
+    console.log(`[higherRatings] Binary search state: low=${low}, high=${high}, mid=${mid}`);
 
-    const saved = await savePairwise(secondTempGroups[currentIndex], selectedGroup);
+    const saved = await savePairwise(secondTempGroups[mid], selectedGroup);
     if (!saved) {
       console.log("[higherRatings] savePairwise failed, stay on current conflict");
       return;
     }
 
-    let tempNumQus = numberOfPromp + 1;
-    setNumberOfPromp(tempNumQus);
 
-    console.log("[higherRatings] Closing conflict");
-    isConflicToggle(false);
+    const newHigh = mid - 1;
+    setHigh(newHigh);
+    setConflictStartTime(new Date());
+
+    console.log(`[higherRatings] New bounds: low=${low}, high=${newHigh}`);
+
+    if (low > newHigh) {
+      console.log("[higherRatings] Binary search complete, closing conflict");
+      isConflicToggle(false);
+    } else {
+      const newMid = Math.floor((low + newHigh) / 2);
+      if (typeof onBoundsChange === "function") {
+        onBoundsChange(low, newHigh);
+        const payload = {
+          groups: secondTempGroups,
+          low: low,
+          high: newHigh,
+        };
+        window.localStorage.setItem(conflictStorageKey, JSON.stringify(payload));
+      }
+      console.log(`[higherRatings] Next comparison: groups[${newMid}] = ${secondTempGroups[newMid]}`);
+      displayNameGroup(secondTempGroups[newMid]);
+    }
   };
 
   const disabledStyle = {
@@ -269,8 +263,8 @@ const ConflictMessage = ({
         You gave the same evaluation to
         <br />
         Team{" "}
-        {secondTempGroups?.length > 0 && currentIndex >= 0
-          ? `${secondTempGroups[currentIndex]}: ${displayConflictNameGroup}`
+        {secondTempGroups?.length > 0 && mid >= 0
+          ? `${secondTempGroups[mid]}: ${displayConflictNameGroup}`
           : "Unknown"}
         <br />
         and
@@ -293,8 +287,8 @@ const ConflictMessage = ({
           {isSavingPairwise
             ? "Saving..."
             : `Team ${
-                secondTempGroups?.length > 0 && currentIndex >= 0
-                  ? secondTempGroups[currentIndex]
+                secondTempGroups?.length > 0 && mid >= 0
+                  ? secondTempGroups[mid]
                   : "Unknown"
               }`}
         </ConflictBtn>
