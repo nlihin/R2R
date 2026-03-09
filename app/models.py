@@ -12,14 +12,12 @@ class User(db.Model):
     confirm = db.Column(db.Boolean(), nullable=False, default=False)
 
     def validate_username(self):
-
         usernames = [user.username for user in User.query.all()]
         if self.username in usernames:
             return False
         return True
 
     def validate_password(self):
-
         if self.password != self.username or len(self.username) != 9:
             return False
         return True
@@ -51,7 +49,6 @@ class QuestionAnswer(db.Model):
     question_number = db.Column(db.Integer(), nullable=False, unique=False)
     answer = db.Column(db.Integer(), nullable=False, unique=False)
     group_number = db.Column(db.Integer(), nullable=True, primary_key=False)
-    class_code = db.Column(db.String(), nullable=False, default='')
 
 
 class Rate(db.Model):
@@ -74,19 +71,11 @@ class CrowdRating(db.Model):
     needs_improvement = db.Column(db.Integer(), nullable=False, primary_key=False)
 
 
-class Rank(db.Model):
-    username = db.Column(db.String(), nullable=False, primary_key=True)
-    date = db.Column(db.Date(), nullable=False, primary_key=True)
-    class_code = db.Column(db.String(), nullable=False, primary_key=True)
-    list_rank = db.Column(db.String(length=1024), nullable=True)
-    number_questions = db.Column(db.Integer(), nullable=False, default=0)
-    experiment_group = db.Column(db.Integer(), nullable=False, default=1)
+class Participant(db.Model):
 
-class RankNew(db.Model):
+    __tablename__ = "participants"
 
-    __tablename__ = "rank_new"
-
-    id = db.Column(db.Integer, primary_key=True)
+    participant_id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(255), nullable=False, index=True)
     class_code = db.Column(db.String(50), nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -94,7 +83,7 @@ class RankNew(db.Model):
 
     items = db.relationship(
         "RankNewItem",
-        backref="rank_new",
+        backref="participant",
         cascade="all, delete-orphan",
         lazy="joined",
     )
@@ -103,7 +92,7 @@ class RankNew(db.Model):
         db.UniqueConstraint(
             "username",
             "class_code",
-            name="uq_rank_new_username_class_code",
+            name="uq_participants_username_class_code",
         ),
     )
 
@@ -113,9 +102,9 @@ class RankNewItem(db.Model):
     __tablename__ = "rank_new_items"
 
     id = db.Column(db.Integer, primary_key=True)
-    rank_new_id = db.Column(
+    participant_id = db.Column(
         db.Integer,
-        db.ForeignKey("rank_new.id", ondelete="CASCADE"),
+        db.ForeignKey("participants.participant_id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -123,14 +112,15 @@ class RankNewItem(db.Model):
     rating = db.Column(db.Integer, nullable=False)
     class_code = db.Column(db.String(50), nullable=False, index=True)
     position = db.Column(db.Integer, default=1)
+    feedback = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
     __table_args__ = (
         db.UniqueConstraint(
-            "rank_new_id",
+            "participant_id",
             "group_id",
-            name="uq_rank_item_rank_group",
+            name="uq_rank_item_participant_group",
         ),
     )
 

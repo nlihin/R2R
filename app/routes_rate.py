@@ -12,6 +12,8 @@ from app.models import (
     CrowdRating,
     QuestionAnswer,
     Pairwise,
+    Participant,
+    RankNewItem,
 )
 from app.ranking_service import RankingService
 
@@ -68,7 +70,7 @@ def rate_page():
         if group_number is None or rating is None or not answers or not crowd_ratings:
             return jsonify(status=400, msg="Missing required fields"), 400
 
-        # ---------- 1. Rate ----------
+        # ---------- 1. Rate (keep original table) ----------
         existing_rate = Rate.query.filter_by(
             username=username,
             group_number=group_number,
@@ -82,11 +84,11 @@ def rate_page():
                 class_code=class_code,
                 datetime=datetime.now(),
                 rate=rating,
-                feedback=feedback,
+                feedback=feedback or "",
             )
             db.session.add(rate_row)
 
-        # ---------- 2. CrowdRating ----------
+        # ---------- 2. CrowdRating (original: username PK) ----------
         existing_crowd = CrowdRating.query.filter_by(
             username=username,
             group_number=group_number,
@@ -106,14 +108,13 @@ def rate_page():
             )
             db.session.add(cr)
 
-        # ---------- 3. QuestionAnswer ----------
+        # ---------- 3. QuestionAnswer (user_id = student ID as int) ----------
         all_questions = Question.query.all()
         for q in all_questions:
             q_existing = QuestionAnswer.query.filter_by(
                 user_id=int(username),
                 question_number=q.number,
                 group_number=group_number,
-                class_code=class_code,
             ).first()
             if q_existing:
                 continue
@@ -124,13 +125,12 @@ def rate_page():
                 question_number=q.number,
                 answer=answers[str(q.number)],
                 group_number=int(group_number),
-                class_code=class_code,
             )
             db.session.add(qa)
 
         db.session.commit()
 
-        # ---------- 4. RankingService: hash + conflicts ----------
+        # ---------- 4. RankingService: cache + conflicts ----------
         RankingService.load_user_rank_cache(
             username=username,
             class_code=class_code,
@@ -166,7 +166,6 @@ def rate_page():
         db.session.rollback()
         print(f"[rate_page] ERROR: {exc}")
         import traceback
-
         traceback.print_exc()
         return jsonify(status=400, msg=f"Error: {exc}"), 400
 

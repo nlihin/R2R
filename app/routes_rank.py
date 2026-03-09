@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app import db
-from app.models import RankNew
+from app.models import Participant
 from flask_jwt_extended import current_user, jwt_required
 from flask_cors import cross_origin
 from ast import literal_eval
@@ -22,12 +22,6 @@ def handle_rank_options():
 def rank_page():
     """
     POST /rank
-
-    БЕЗ ДАТЫ! Рейтинг сохраняется НАВСЕГДА.
-    Обрабатывает список групп вида:
-    {
-        "list_rank": "[(43, 5), (44, 4)]"
-    }
     """
     try:
         class_code = current_user.class_code
@@ -46,13 +40,12 @@ def rank_page():
         print(f"[rank_page] username={username}, class_code={class_code}")
         print(f"[rank_page] new_list_rank={new_list_rank}")
 
-        # Обрабатываем каждую группу из new_list_rank через RankingService
         first_conflict = []
         for group_id, rating in new_list_rank:
             print(f"\n[rank_page] Processing group_id={group_id}, rating={rating}")
 
             result = RankingService.add_group_to_rank(
-                username=username,
+                username=str(username),
                 class_code=class_code,
                 group_id=int(group_id),
                 rating=int(rating),

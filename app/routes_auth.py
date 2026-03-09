@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, make_response
-from app.models import User, Class_codes, Rank, RankNew
+from app.models import User, Class_codes
 from app import db, jwt
 from flask_jwt_extended import create_access_token
 from flask_cors import cross_origin
@@ -20,7 +20,7 @@ def handle_register_options():
 @cross_origin()
 #insert user to db
 def register():
-    privacy_consent = request.json.get('privacy_consent', False) 
+    privacy_consent = request.json.get('privacy_consent', False)
     new_user = User(username=request.json.get('username'),
                     name=request.json.get('name'),
                     email_address=request.json.get('email_address'),
@@ -75,6 +75,7 @@ def user_identity_lookup(user):
     return user
 
 
+
 # change username to user id ????
 
 # Register a callback function that loads a user from your database whenever
@@ -85,5 +86,3 @@ def user_identity_lookup(user):
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
     return User.query.filter_by(username=identity).one_or_none()
-
-

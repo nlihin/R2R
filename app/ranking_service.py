@@ -1,40 +1,61 @@
 from datetime import datetime
 from app import db
-from app.models import RankNew, RankNewItem, Pairwise
+from app.models import Participant, RankNewItem, Pairwise
 
 
 class RankingService:
 
-
     user_rank_cache: dict = {}
 
     @staticmethod
+    def _cache_key(username: str, class_code: str) -> str:
+        return f"{username}_{class_code}"
+
+
+    @staticmethod
     def load_user_rank_cache(username: str, class_code: str) -> dict:
-        rank_row = RankNew.query.filter_by(
+        participant = Participant.query.filter_by(
             username=username,
             class_code=class_code,
         ).first()
 
         table: dict[int, dict] = {}
-        if rank_row:
-            for item in rank_row.items:
+        participant_id = None
+        if participant:
+            participant_id = participant.participant_id
+            for item in participant.items:
                 table[item.group_id] = {
                     "rating": item.rating,
                     "position": item.position,
                     "id": item.id,
                 }
 
-        if username not in RankingService.user_rank_cache:
-            RankingService.user_rank_cache[username] = {}
-        RankingService.user_rank_cache[username][class_code] = table
+        key = RankingService._cache_key(username, class_code)
+        RankingService.user_rank_cache[key] = {
+            "table": table,
+            "participant_id": participant_id,
+        }
 
-        print(f"\n[LOAD_CACHE] username={username}, class_code={class_code}")
+        print(f"\n[LOAD_CACHE] username={username}, class_code={class_code}, participant_id={participant_id}")
         print(f"[LOAD_CACHE] Loaded groups: {list(table.keys())}")
         return table
 
+
+    @staticmethod
+    def _get_cache(username: str, class_code: str) -> dict:
+        key = RankingService._cache_key(username, class_code)
+        return RankingService.user_rank_cache.get(key, {})
+
+
     @staticmethod
     def _get_table(username: str, class_code: str) -> dict:
-        return RankingService.user_rank_cache.get(username, {}).get(class_code, {})
+        return RankingService._get_cache(username, class_code).get("table", {})
+
+
+    @staticmethod
+    def _get_participant_id(username: str, class_code: str):
+        return RankingService._get_cache(username, class_code).get("participant_id")
+
 
     @staticmethod
     def add_to_cache(
@@ -45,16 +66,24 @@ class RankingService:
         position: int,
         item_id: int,
     ) -> None:
-        if username not in RankingService.user_rank_cache:
-            RankingService.user_rank_cache[username] = {}
-        if class_code not in RankingService.user_rank_cache[username]:
-            RankingService.user_rank_cache[username][class_code] = {}
-        RankingService.user_rank_cache[username][class_code][group_id] = {
+        key = RankingService._cache_key(username, class_code)
+        if key not in RankingService.user_rank_cache:
+            RankingService.user_rank_cache[key] = {"table": {}, "participant_id": None}
+        RankingService.user_rank_cache[key]["table"][group_id] = {
             "rating": rating,
             "position": position,
             "id": item_id,
         }
         print(f"[ADD_CACHE] Added: group_id={group_id}, rating={rating}, pos={position}")
+
+
+    @staticmethod
+    def _set_participant_id(username: str, class_code: str, pid: int) -> None:
+        key = RankingService._cache_key(username, class_code)
+        if key not in RankingService.user_rank_cache:
+            RankingService.user_rank_cache[key] = {"table": {}, "participant_id": None}
+        RankingService.user_rank_cache[key]["participant_id"] = pid
+
 
     @staticmethod
     def update_position_in_cache(
@@ -64,7 +93,7 @@ class RankingService:
         if group_id in table:
             old_pos = table[group_id]["position"]
             table[group_id]["position"] = new_position
-            print(f"[UPDATE_POS] group_id={group_id}: {old_pos} → {new_position}")
+            print(f"[UPDATE_POS] group_id={group_id}: {old_pos} -> {new_position}")
 
     @staticmethod
     def get_conflict_groups(
@@ -90,7 +119,6 @@ class RankingService:
     def compare_groups_by_pairwise(
         group_a: int, group_b: int, username: str, class_code: str
     ) -> int:
-
         q1 = f"{group_a},{group_b}"
         q2 = f"{group_b},{group_a}"
 
@@ -124,7 +152,7 @@ class RankingService:
                 return 1
             if winner == group_b:
                 return -1
-        else:  # pair.pairwise_q == q2
+        else:
             if winner == group_b:
                 return -1
             if winner == group_a:
@@ -139,7 +167,6 @@ class RankingService:
         rating: int,
         exclude_group_id: int = None,
     ) -> list[int]:
-
         conflicts = RankingService.get_conflict_groups(
             username=username,
             class_code=class_code,
@@ -152,7 +179,6 @@ class RankingService:
         if len(conflicts) <= 1:
             return conflicts
 
-
         graph: dict[int, list[int]] = {g: [] for g in conflicts}
         in_degree: dict[int, int] = {g: 0 for g in conflicts}
 
@@ -164,20 +190,16 @@ class RankingService:
                 c = RankingService.compare_groups_by_pairwise(
                     a, b, username=username, class_code=class_code
                 )
-                if c > 0:  
+                if c > 0:
                     graph[a].append(b)
                     in_degree[b] += 1
 
         print(f"[TOPOSORT] Graph edges: {graph}")
         print(f"[TOPOSORT] In-degrees: {in_degree}")
-
- 
         queue = [g for g in conflicts if in_degree[g] == 0]
         result = []
 
         print(f"[TOPOSORT] Initial queue (in_degree=0): {queue}")
-
- 
         while queue:
             node = queue.pop(0)
             result.append(node)
@@ -210,7 +232,7 @@ class RankingService:
             old_pos = item.position
             item.position = data.get("position", item.position)
             item.updated_at = datetime.now()
-            print(f"[SAVE_DB] group_id={group_id}: {old_pos} → {item.position}")
+            print(f"[SAVE_DB] group_id={group_id}: {old_pos} -> {item.position}")
 
         db.session.commit()
         print("[SAVE_DB] Committed\n")
@@ -226,10 +248,8 @@ class RankingService:
         print(f"[ADD_GROUP] START: username={username}, class_code={class_code}, group_id={group_id}, rating={rating}")
         print("=" * 100)
 
-        if username not in RankingService.user_rank_cache:
-            RankingService.user_rank_cache[username] = {}
-
-        if class_code not in RankingService.user_rank_cache[username]:
+        cache = RankingService._get_cache(username, class_code)
+        if not cache:
             RankingService.load_user_rank_cache(username, class_code)
 
         table = RankingService._get_table(username, class_code)
@@ -239,18 +259,20 @@ class RankingService:
             print("=" * 100 + "\n")
             return {"existing": True, "conflict": False, "sorted_groups": []}
 
-        rank_row = RankNew.query.filter_by(
+        participant = Participant.query.filter_by(
             username=username,
             class_code=class_code,
         ).first()
-        if not rank_row:
-            rank_row = RankNew(username=username, class_code=class_code)
-            db.session.add(rank_row)
+        if not participant:
+            participant = Participant(username=username, class_code=class_code)
+            db.session.add(participant)
             db.session.flush()
+
+        RankingService._set_participant_id(username, class_code, participant.participant_id)
 
         next_position = len(table) + 1
         item = RankNewItem(
-            rank_new_id=rank_row.id,
+            participant_id=participant.participant_id,
             group_id=group_id,
             rating=rating,
             class_code=class_code,
@@ -314,7 +336,6 @@ class RankingService:
         conflicts_to_show.sort(
             key=lambda gid: table.get(gid, {}).get("position", 9999)
         )
-
 
         print(f"[ADD_GROUP] RETURNING: conflicts={conflicts_to_show}")
         print("=" * 100 + "\n")
