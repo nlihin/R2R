@@ -139,9 +139,12 @@ const GroupRatings = () => {
       (acc, curr) => acc + curr,
       0
     );
+    if (totalRating === 0) {
+      return true;
+    }
     if (totalRating === 100) return true;
     else if (totalRating > 100) {
-            //TODO: CREATE POPUP FOR RATING FAIL
+      //TODO: CREATE POPUP FOR RATING FAIL
       setModalToggle(true);
       setModalText("Your numbers sum up is over 100. Please fix.");
       return false;

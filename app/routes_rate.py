@@ -67,7 +67,7 @@ def rate_page():
         class_code = current_user.class_code
         username = str(current_user.username)
 
-        if group_number is None or rating is None or not answers or not crowd_ratings:
+        if group_number is None or rating is None or not answers:
             return jsonify(status=400, msg="Missing required fields"), 400
 
         # ---------- 1. Rate (keep original table) ----------
@@ -89,24 +89,26 @@ def rate_page():
             db.session.add(rate_row)
 
         # ---------- 2. CrowdRating (original: username PK) ----------
-        existing_crowd = CrowdRating.query.filter_by(
-            username=username,
-            group_number=group_number,
-            class_code=class_code,
-        ).first()
-
-        if not existing_crowd:
-            cr = CrowdRating(
+        if crowd_ratings:
+            existing_crowd = CrowdRating.query.filter_by(
                 username=username,
                 group_number=group_number,
                 class_code=class_code,
-                outstanding=crowd_ratings.get("outstanding", 0),
-                very_good=crowd_ratings.get("very_good", 0),
-                good=crowd_ratings.get("good", 0),
-                fair=crowd_ratings.get("fair", 0),
-                needs_improvement=crowd_ratings.get("needs_improvement", 0),
-            )
-            db.session.add(cr)
+            ).first()
+
+
+            if not existing_crowd:
+                cr = CrowdRating(
+                    username=username,
+                    group_number=group_number,
+                    class_code=class_code,
+                    outstanding=crowd_ratings.get("outstanding", 0),
+                    very_good=crowd_ratings.get("very_good", 0),
+                    good=crowd_ratings.get("good", 0),
+                    fair=crowd_ratings.get("fair", 0),
+                    needs_improvement=crowd_ratings.get("needs_improvement", 0),
+                )
+                db.session.add(cr)
 
         # ---------- 3. QuestionAnswer (user_id = student ID as int) ----------
         all_questions = Question.query.all()

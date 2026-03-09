@@ -16,43 +16,39 @@ const QesCard = ({
 }) => {
   const [userRating, setUserRatings] = useState();
   const [feedback1, setUserfeedback] = useState('');
-  const [crowdRating, setCrowdRatings] = useState({
-    outstanding: 0,
-    very_good: 0,
-    good: 0,
-    fair: 0,
-    needs_improvement: 0,
-  });
+  const [crowdRating, setCrowdRatings] = useState(null);
+
   useEffect(() => {
-    rankHandler(userRating, crowdRating,feedback1);
-  }, [userRating, userRating, crowdRating,feedback1]);
+    rankHandler(userRating, crowdRating, feedback1);
+  }, [userRating, crowdRating, feedback1]);
 
   const ratingHandler = (e) => {
     setUserRatings(parseInt(e.target.value));
   };
   const feedbackHandler = (e) => {
-    //setUserfeedback(e.target.toString);
     setUserfeedback(e.target.value);
   };
 
   const crowdGroupRatingHandler = (e) => {
-    let tempCrowdRatings = { ...crowdRating };
-    tempCrowdRatings[`${e.target.id}`] = parseInt(e.target.value);
-
-    // let sumRatings = 0;
-
-    // for (let key in tempCrowdRatings) {
-    //   if (tempCrowdRatings.hasOwnProperty(key)) {
-    //     sumRatings += tempCrowdRatings[key];
-    //   }
-    // }
-    // console.log(sumRatings);
-    // if (sumRatings > 100) {
-    //   alert("split 100% currectly");
-    //   return;
-    // }
-    setCrowdRatings(tempCrowdRatings);
+    const value = parseInt(e.target.value);
+    const id = e.target.id;
+    setCrowdRatings((prev) => {
+      const base =
+        prev ||
+        {
+          outstanding: 0,
+          very_good: 0,
+          good: 0,
+          fair: 0,
+          needs_improvement: 0,
+        };
+      return {
+        ...base,
+        [id]: isNaN(value) ? 0 : value,
+      };
+    });
   };
+
   return (
     <>
       {userEvaluation && (
@@ -148,7 +144,7 @@ const QesCard = ({
           {otherRatings && (
             <textarea
               value={feedback1}
-                id="feedback1"
+              id="feedback1"
               name="postContent"
               rows="4"
               style={{ width: "100%", textAlign: "left" }}
@@ -175,7 +171,7 @@ const QesCard = ({
                 type="number"
                 name="crowdRating"
                 max="100"
-                value={crowdRating.outstanding}
+                value={crowdRating?.outstanding ?? 0}
                 checked={userRating === 5}
                 onChange={(e) => crowdGroupRatingHandler(e)}
               />
@@ -190,7 +186,7 @@ const QesCard = ({
                 type="number"
                 name="crowdRating"
                 max="100"
-                value={crowdRating.very_good}
+                value={crowdRating?.very_good ?? 0}
                 checked={userRating === 4}
                 onChange={(e) => crowdGroupRatingHandler(e)}
               />
@@ -205,7 +201,7 @@ const QesCard = ({
                 type="number"
                 name="crowdRating"
                 max="100"
-                value={crowdRating.good}
+                value={crowdRating?.good ?? 0}
                 checked={userRating === 3}
                 onChange={(e) => crowdGroupRatingHandler(e)}
               />
@@ -220,7 +216,7 @@ const QesCard = ({
                 type="number"
                 name="crowdRating"
                 max="100"
-                value={crowdRating.fair}
+                value={crowdRating?.fair ?? 0}
                 checked={userRating === 2}
                 onChange={(e) => crowdGroupRatingHandler(e)}
               />
@@ -238,7 +234,7 @@ const QesCard = ({
                 type="number"
                 name="crowdRating"
                 max="100"
-                value={crowdRating.needs_improvement}
+                value={crowdRating?.needs_improvement ?? 0}
                 checked={userRating === 1}
                 onChange={(e) => crowdGroupRatingHandler(e)}
               />
