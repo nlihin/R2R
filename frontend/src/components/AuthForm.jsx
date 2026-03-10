@@ -40,13 +40,19 @@ function AuthForm({ modalText, modalToggle }) {
     //for debugging
     console.log("API Response Data:", data);
 
-    if (reID !== iD) {
-      modalText("your IDs don't match, please retry.");
-      modalToggle(true);
-    } else if (reID.length !== 9) {
-      modalText("your ID has to contain 9 digits, please retry.");
-      modalToggle(true);
-    } else if (data && data.msg) {
+    if (!isLogin) {
+      if (reID !== iD) {
+        modalText("your IDs don't match, please retry.");
+        modalToggle(true);
+        return;
+      } else if (!reID || reID.length !== 9) {
+        modalText("your ID has to contain 9 digits, please retry.");
+        modalToggle(true);
+        return;
+      }
+    }
+
+    if (data && data.msg) {
       modalText(data.msg);
       modalToggle(true);
     } else {
@@ -60,40 +66,46 @@ function AuthForm({ modalText, modalToggle }) {
         onClose={() => setPrivacyModalOpen(false)} 
       />
       <Form method="post" className={classes.form}>
-        <h1>{isLogin ? "Login" : "Register"}</h1>
+        <h1>{isLogin ? "Log in" : "Register"}</h1>
         {data && data.msg && modalText(data.msg) && modalToggle(true)}
         <p>
-          {/* <label htmlFor="email">אימייל</label> */}
           <input
             id="username"
             type="number"
             name="username"
-            placeholder="id"
-            required
-            size="9"
-            onChange={(e) => chackingID(e)}
-          />
-        </p>  
-        <p>
-          {/* <label htmlFor="image">Password</label> */}
-          <input
-            id="password"
-            type="number"
-            name="password"
-            placeholder="re-enter your id"
+            placeholder="9-digit ID"
             required
             size="9"
             onChange={(e) => chackingID(e)}
           />
         </p>
         {isLogin && (
+          <input
+            type="hidden"
+            name="password"
+            value={iD || ""}
+          />
+        )}
+        {!isLogin && (
           <p>
-            {/* <label htmlFor="image">session</label> */}
+            <input
+              id="password"
+              type="number"
+              name="password"
+              placeholder="Re-enter ID"
+              required
+              size="9"
+              onChange={(e) => chackingID(e)}
+            />
+          </p>
+        )}
+        {isLogin && (
+          <p>
             <input
               id="class_code"
               type="text"
               name="class_code"
-              placeholder="class code"
+              placeholder="Class"
               required
               size="3"
               onChange={(e) => checkingCode(e)}
@@ -102,19 +114,6 @@ function AuthForm({ modalText, modalToggle }) {
         )}
         {!isLogin && (
           <p>
-            {/* <label htmlFor="image">Password</label> */}
-            <input
-              id="email"
-              type="email"
-              name="email"
-              placeholder="Email"
-              required
-            />
-          </p>
-        )}
-        {!isLogin && (
-          <p>
-            {/* <label htmlFor="image">Password</label> */}
             <input
               id="name"
               type="text"
@@ -124,17 +123,27 @@ function AuthForm({ modalText, modalToggle }) {
             />
           </p>
         )}
+        {!isLogin && (
+          <p>
+            <input
+              id="email"
+              type="email"
+              name="email"
+              placeholder="Email"
+              required
+            />
+          </p>
+        )}
 
         {!isLogin && (
-          <div style={{ 
-            marginTop: "20px", 
-            display: "flex", 
-            alignItems: "flex-start", 
-            gap: "10px",
-            padding: "15px",
-            backgroundColor: "#f5f5f5",
-            borderRadius: "4px"
-          }}>
+          <div
+            style={{ 
+              marginTop: "15px", 
+              display: "flex", 
+              alignItems: "flex-start", 
+              gap: "8px"
+            }}
+          >
             <input
               id="privacy_consent"
               type="checkbox"
@@ -157,7 +166,7 @@ function AuthForm({ modalText, modalToggle }) {
                 flex: 1
               }}
             >
-              I agree to the{" "}
+              I agree to the Data Processing{" "}
               <span
                 onClick={() => setPrivacyModalOpen(true)}
                 onKeyDown={(e) => {
@@ -166,25 +175,45 @@ function AuthForm({ modalText, modalToggle }) {
                 role="button"
                 tabIndex={0}
                 style={{
-                  color: "#007bff",
+                  color: "#fae1af",
                   textDecoration: "underline",
                   cursor: "pointer",
                   fontWeight: "bold"
                 }}
               >
-                Data Processing Agreement
+                 Policy
               </span>
             </label>
           </div>
         )}
 
-        <div className={classes.actions}>
-          <Link to={`?mode=${isLogin ? "register" : "login"}`}>
-            {isLogin ? "Click here to register" : "Click here to login"}
-          </Link>
-          <button disabled={isSubmitting} onClick={submitChecks}>
-            {isSubmitting ? "Submitting..." : "ENTER"}
+        <div
+          className={classes.actions}
+          style={{
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "0.75rem",
+          }}
+        >
+          <button
+            disabled={isSubmitting}
+            onClick={submitChecks}
+            style={{
+              minWidth: "245px",
+              textAlign: "center",
+              fontSize: "21px",
+              fontWeight: "bold"
+            }}
+          >
+            {isSubmitting ? "Submitting..." : isLogin ? "Log in" : "Register"}
           </button>
+          <div style={{ textAlign: "center", fontSize: "16px", marginTop: "1rem"}}>
+            {isLogin ? "Don’t have an account?" : "Already have an account?"}{" "}
+            <br />
+            <Link to={`?mode=${isLogin ? "register" : "login"}`}>
+              {isLogin ? "Register" : "Log in"}
+            </Link>
+          </div>
         </div>
       </Form>
     </>
