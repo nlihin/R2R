@@ -39,31 +39,37 @@ class Class_codes(db.Model):
 
 class Question(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
-    number = db.Column(db.Integer(), nullable=False, unique=True)
-    description = db.Column(db.String(length=1024), nullable=False, unique=True)
+    number = db.Column(db.Integer(), nullable=False, unique=False)
+    description = db.Column(db.String(length=1024), nullable=False, unique=False)
+    class_code = db.Column(db.String(length=255), nullable=False, default='')
+
+    __table_args__ = (
+        db.UniqueConstraint('number', 'class_code', name='uq_question_number_class'),
+    )
 
 
 class QuestionAnswer(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
-    user_id = db.Column(db.Integer(), primary_key=False)
+    participant_id = db.Column(
+        db.Integer(),
+        db.ForeignKey("participants.participant_id"),
+        nullable=True,
+    )
     question_number = db.Column(db.Integer(), nullable=False, unique=False)
     answer = db.Column(db.Integer(), nullable=False, unique=False)
     group_number = db.Column(db.Integer(), nullable=True, primary_key=False)
 
 
-class Rate(db.Model):
-    username = db.Column(db.String(), nullable=False, primary_key=True)
-    group_number = db.Column(db.Integer(), nullable=False, primary_key=True)
-    class_code = db.Column(db.String(), nullable=False, primary_key=True)
-    datetime = db.Column(db.DateTime(), nullable=True)
-    rate = db.Column(db.Integer(), nullable=False)
-    feedback = db.Column(db.String(), nullable=False, primary_key=False)
-
-
 class CrowdRating(db.Model):
-    username = db.Column(db.String(), nullable=False, primary_key=True)
+    __tablename__ = "crowd_rating"
+
+    participant_id = db.Column(
+        db.Integer(),
+        db.ForeignKey("participants.participant_id"),
+        nullable=False,
+        primary_key=True,
+    )
     group_number = db.Column(db.Integer(), nullable=False, primary_key=True)
-    class_code = db.Column(db.String(), nullable=False, primary_key=True)
     outstanding = db.Column(db.Integer(), nullable=False, primary_key=False)
     very_good = db.Column(db.Integer(), nullable=False, primary_key=False)
     good = db.Column(db.Integer(), nullable=False, primary_key=False)
@@ -131,7 +137,11 @@ class Pairwise(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
     class_code = db.Column(db.String(length=50), nullable=False)
-    username = db.Column(db.Integer(), nullable=False)
+    participant_id = db.Column(
+        db.Integer(),
+        db.ForeignKey("participants.participant_id"),
+        nullable=False,
+    )
     pairwise_q = db.Column(db.String(length=50), nullable=False)
     answer = db.Column(db.Integer(), nullable=False)
     ask_time = db.Column(db.DateTime(), nullable=False)

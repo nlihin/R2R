@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify
-from app.models import Group, Rate, Participant, RankNewItem
+from app.models import Group, Participant, RankNewItem
 from flask_jwt_extended import current_user, jwt_required
 from flask_cors import cross_origin
 

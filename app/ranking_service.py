@@ -119,12 +119,16 @@ class RankingService:
     def compare_groups_by_pairwise(
         group_a: int, group_b: int, username: str, class_code: str
     ) -> int:
+        participant_id = RankingService._get_participant_id(username, class_code)
+        if not participant_id:
+            return 0
+
         q1 = f"{group_a},{group_b}"
         q2 = f"{group_b},{group_a}"
 
         p1 = (
             Pairwise.query.filter_by(
-                username=int(username),
+                participant_id=participant_id,
                 class_code=class_code,
                 pairwise_q=q1,
             )
@@ -133,7 +137,7 @@ class RankingService:
         )
         p2 = (
             Pairwise.query.filter_by(
-                username=int(username),
+                participant_id=participant_id,
                 class_code=class_code,
                 pairwise_q=q2,
             )

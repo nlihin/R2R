@@ -7,7 +7,6 @@ from flask_jwt_extended import current_user, jwt_required
 from app import db
 from app.models import (
     Group,
-    Rate,
     Question,
     CrowdRating,
     QuestionAnswer,
@@ -41,7 +40,17 @@ def get_groups():
     if not group:
         return jsonify(status=400, msg="Group not registered")
 
-    questions = {q.number: q.description for q in Question.query.all()}
+    questions = {
+        q.number: q.description
+        for q in Question.query.filter_by(class_code=class_code).all()
+    }
+
+    # Fallback: if no questions found for this class_code, try default ''
+    if not questions:
+        questions = {
+            q.number: q.description
+            for q in Question.query.filter_by(class_code='').all()
+        }
 
     return jsonify(
         status=200,
@@ -67,41 +76,47 @@ def rate_page():
         class_code = current_user.class_code
         username = str(current_user.username)
 
-        if group_number is None or rating is None or not answers:
+        if group_number is None or rating is None:
             return jsonify(status=400, msg="Missing required fields"), 400
 
-        # ---------- 1. Rate (keep original table) ----------
-        existing_rate = Rate.query.filter_by(
-            username=username,
-            group_number=group_number,
-            class_code=class_code,
+        # Validate crowd_ratings sum = 100
+        if crowd_ratings:
+            total = sum(crowd_ratings.values())
+            if total != 100:
+                return jsonify(status=400, msg=f"Crowd ratings must sum to 100, got {total}"), 400
+
+        participant = Participant.query.filter_by(
+            username=username, class_code=class_code
         ).first()
 
-        if not existing_rate:
-            rate_row = Rate(
-                username=username,
-                group_number=group_number,
-                class_code=class_code,
-                datetime=datetime.now(),
-                rate=rating,
-                feedback=feedback or "",
-            )
-            db.session.add(rate_row)
+        if not participant:
+            participant = Participant(username=username, class_code=class_code)
+            db.session.add(participant)
+            db.session.flush()
 
-        # ---------- 2. CrowdRating (original: username PK) ----------
+        already_rated = RankNewItem.query.filter_by(
+            participant_id=participant.participant_id,
+            group_id=int(group_number),
+        ).first()
+
+        if already_rated:
+            return jsonify(
+                status=200,
+                ranking=False,
+                message="Group already rated",
+            )
+
+        # ---------- 1. CrowdRating ----------
         if crowd_ratings:
             existing_crowd = CrowdRating.query.filter_by(
-                username=username,
+                participant_id=participant.participant_id,
                 group_number=group_number,
-                class_code=class_code,
             ).first()
-
 
             if not existing_crowd:
                 cr = CrowdRating(
-                    username=username,
+                    participant_id=participant.participant_id,
                     group_number=group_number,
-                    class_code=class_code,
                     outstanding=crowd_ratings.get("outstanding", 0),
                     very_good=crowd_ratings.get("very_good", 0),
                     good=crowd_ratings.get("good", 0),
@@ -110,11 +125,15 @@ def rate_page():
                 )
                 db.session.add(cr)
 
-        # ---------- 3. QuestionAnswer (user_id = student ID as int) ----------
-        all_questions = Question.query.all()
+        # ---------- 2. QuestionAnswer ----------
+        # Try class_code-specific questions first, fallback to default
+        all_questions = Question.query.filter_by(class_code=class_code).all()
+        if not all_questions:
+            all_questions = Question.query.filter_by(class_code='').all()
+
         for q in all_questions:
             q_existing = QuestionAnswer.query.filter_by(
-                user_id=int(username),
+                participant_id=participant.participant_id,
                 question_number=q.number,
                 group_number=group_number,
             ).first()
@@ -123,7 +142,7 @@ def rate_page():
             if str(q.number) not in answers:
                 continue
             qa = QuestionAnswer(
-                user_id=int(username),
+                participant_id=participant.participant_id,
                 question_number=q.number,
                 answer=answers[str(q.number)],
                 group_number=int(group_number),
@@ -132,7 +151,7 @@ def rate_page():
 
         db.session.commit()
 
-        # ---------- 4. RankingService: cache + conflicts ----------
+        # ---------- 3. RankingService: cache + conflicts ----------
         RankingService.load_user_rank_cache(
             username=username,
             class_code=class_code,
@@ -192,9 +211,16 @@ def save_pairwise():
 
         username = str(current_user.username)
 
+        participant = Participant.query.filter_by(
+            username=username, class_code=class_code
+        ).first()
+
+        if not participant:
+            return jsonify(status=400, msg="Participant not found"), 400
+
         row = Pairwise(
             class_code=class_code,
-            username=int(username),
+            participant_id=participant.participant_id,
             pairwise_q=pairwise_q,
             answer=answer,
             ask_time=ask_time,
