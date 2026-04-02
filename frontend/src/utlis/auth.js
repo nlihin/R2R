@@ -9,11 +9,18 @@ export const tokenLoader = () => {
   return getAuthToken();
 };
 
-export const checkAuthLoader = () => {
+export const checkAuthLoader = ({ request }) => {
+  const url = new URL(request.url);
+
+  if (url.hash.startsWith("#/admin")) {
+    return null;
+  }
+
+
   const token = getAuthToken();
 
   if (!token) {
     return redirect("/auth");
   }
-  return true;
+  return null;
 };

@@ -55,6 +55,8 @@ app.register_blueprint(group)
 app.register_blueprint(rate)
 app.register_blueprint(rank)
 
+from app.admin import admin_bp
+app.register_blueprint(admin_bp)
 
 #@app.route('/')
 @app.route('/', defaults={'path': ''})
