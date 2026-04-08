@@ -24,7 +24,6 @@ def require_classadmin(f):
             return jsonify(msg="Invalid admin token"), 401
 
         role = claims.get("role")
-        must_change = claims.get("must_change_password")
 
         admin_row = db.session.get(AdminUser, admin_id)
         if not admin_row or not admin_row.is_active:
@@ -34,7 +33,7 @@ def require_classadmin(f):
 
         if role not in ("courseadmin", "sysadmin"):
             return jsonify(msg="Forbidden"), 403
-        if must_change or admin_row.must_change_password:
+        if admin_row.must_change_password:
             return jsonify(
                 msg="must_change_password",
                 code="MUST_CHANGE_PASSWORD"

@@ -40,6 +40,7 @@ const adminSlice = createSlice({
     logoutAdmin(state) {
       state.token = null;
       state.role = null;
+      state.mustChangePassword = false;
       state.adminId = null;
       state.adminUsername = null;
       state.selectedClass = null;
