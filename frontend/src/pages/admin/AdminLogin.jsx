@@ -43,6 +43,8 @@ const AdminLogin = () => {
           token: data.access_token,
           role: data.role,
           mustChangePassword: data.must_change_password,
+          adminId: data.admin_id,
+          adminUsername: data.admin_username,
         })
       );
       if (data.must_change_password) {

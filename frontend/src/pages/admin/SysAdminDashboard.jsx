@@ -7,6 +7,16 @@ import {
   DangerButton,
   ErrorMsg,
 } from "./AdminStyles";
+import {
+  fetchAdmins,
+  createAdmin,
+  updateAdmin,
+  resetAdminPassword,
+  fetchAdminClassesAssignments,
+  assignClassToAdmin,
+  removeClassAssignment,
+  fetchAvailableClasses,
+} from "../../store/admin/admin-Actions";
 
 const SysAdminDashboard = () => {
   const adminState = useSelector((s) => s.admin || {});
@@ -16,53 +26,72 @@ const SysAdminDashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const [admins, setAdmins] = useState([
-    {
-      admin_id: "000000001",
-      admin_username: "Sys Admin",
-      admin_email: "sysadmin@example.com",
-      role: "sysadmin",
-      is_active: true,
-    },
-    {
-      admin_id: "000000002",
-      admin_username: "Course Admin",
-      admin_email: "courseadmin@example.com",
-      role: "courseadmin",
-      is_active: true,
-    },
-  ]);
-  const [assigns, setAssigns] = useState([
-    { admin_id: "000000001", class_code: "056" },
-    { admin_id: "000000002", class_code: "256" },
-  ]);
+  const [admins, setAdmins] = useState([]);
+  const [assigns, setAssigns] = useState([]);
   const [editAdmins, setEditAdmins] = useState({});
   const [newAdminName, setNewAdminName] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
-  const [newAdminPass, setNewAdminPass] = useState("");
+  const [newAdminRole, setNewAdminRole] = useState("courseadmin");
   const [lastTemp, setLastTemp] = useState(null);
   const [newAssignAdminId, setNewAssignAdminId] = useState("");
   const [newAssignClassCode, setNewAssignClassCode] = useState("");
+  const [availableClasses, setAvailableClasses] = useState([]);
   const [error, setError] = useState("");
-
-  const [availableClasses] = useState(["056", "126", "256"]);
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
+  const [loadingAssigns, setLoadingAssigns] = useState(false);
 
   useEffect(() => {
     if (!token) {
       navigate("/admin/login");
       return;
     }
-    const m = {};
-    admins.forEach((a) => {
-      m[a.admin_id] = {
-        admin_username: a.admin_username,
-        admin_email: a.admin_email,
-        role: a.role,
-        is_active: a.is_active,
-      };
-    });
-    setEditAdmins(m);
-  }, [token, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
+    let cancelled = false;
+
+    const load = async () => {
+      setError("");
+      setLoadingAdmins(true);
+      setLoadingAssigns(true);
+      try {
+        const adminsData = await dispatch(fetchAdmins(token));
+        if (!cancelled) {
+          setAdmins(adminsData);
+          const m = {};
+          adminsData.forEach((a) => {
+            m[a.admin_id] = {
+              admin_username: a.admin_username,
+              admin_email: a.admin_email,
+              role: a.role,
+              is_active: a.is_active,
+            };
+          });
+          setEditAdmins(m);
+          setLoadingAdmins(false);
+        }
+
+        const assignsData = await dispatch(
+          fetchAdminClassesAssignments(token)
+        );
+        const classesData = await dispatch(fetchAvailableClasses(token));
+        if (!cancelled) {
+          setAssigns(assignsData);
+          setAvailableClasses(classesData);
+          setLoadingAssigns(false);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(e.message || "Failed to load admin data");
+          setLoadingAdmins(false);
+          setLoadingAssigns(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, navigate, dispatch]);
 
   const handleLogout = () => {
     dispatch(logoutAdmin());
@@ -81,68 +110,81 @@ const SysAdminDashboard = () => {
     }));
   };
 
-  const saveAdminLocal = (admin_id) => {
+  const saveAdminRemote = async (admin_id) => {
     setError("");
     const payload = editAdmins[admin_id];
     if (!payload) return;
-    setAdmins((prev) =>
-      prev.map((a) =>
-        a.admin_id === admin_id
-          ? {
-              ...a,
-              admin_username: payload.admin_username,
-              admin_email: payload.admin_email,
-              role: payload.role,
-              is_active: payload.is_active,
-            }
-          : a
-      )
-    );
+    try {
+      await dispatch(updateAdmin(token, admin_id, payload));
+      setAdmins((prev) =>
+        prev.map((a) =>
+          a.admin_id === admin_id
+            ? {
+                ...a,
+                admin_username: payload.admin_username,
+                admin_email: payload.admin_email,
+                role: payload.role,
+                is_active: payload.is_active,
+              }
+            : a
+        )
+      );
+    } catch (e) {
+      setError(e.message || "Failed to save admin");
+    }
   };
 
-  const deleteAdminLocal = (admin_id) => {
+  const handleResetPassword = async (admin_id) => {
     setError("");
-    setAdmins((prev) => prev.filter((a) => a.admin_id !== admin_id));
-    setAssigns((prev) => prev.filter((r) => r.admin_id !== admin_id));
+    try {
+      const data = await dispatch(resetAdminPassword(token, admin_id));
+      setLastTemp({
+        admin_id: data.admin_id,
+        temp_password: data.temp_password,
+      });
+    } catch (e) {
+      setError(e.message || "Failed to reset password");
+    }
   };
 
-  const createAdminLocal = () => {
+  const createAdminRemote = async () => {
     setError("");
     setLastTemp(null);
     if (!newAdminName || !newAdminEmail) {
       setError("Username and email are required");
       return;
     }
-    const nextIdNum =
-      admins.length > 0
-        ? Math.max(...admins.map((a) => parseInt(a.admin_id, 10))) + 1
-        : 1;
-    const newId = String(nextIdNum).padStart(9, "0");
-    const tempPassword = "Temp12345678";
-    const newAdmin = {
-      admin_id: newId,
-      admin_username: newAdminName,
-      admin_email: newAdminEmail,
-      role: "courseadmin",
-      is_active: true,
-    };
-    setAdmins((prev) => [...prev, newAdmin]);
-    setEditAdmins((prev) => ({
-      ...prev,
-      [newId]: {
-        admin_username: newAdminName,
-        admin_email: newAdminEmail,
-        role: "courseadmin",
-        is_active: true,
-      },
-    }));
-    setLastTemp({ admin_id: newId, temp_password: tempPassword });
-    setNewAdminName("");
-    setNewAdminEmail("");
-    setNewAdminPass("");
+    try {
+      const data = await dispatch(
+        createAdmin(token, {
+          admin_username: newAdminName,
+          admin_email: newAdminEmail,
+          role: newAdminRole,
+        })
+      );
+      setAdmins((prev) => [...prev, data]);
+      setEditAdmins((prev) => ({
+        ...prev,
+        [data.admin_id]: {
+          admin_username: data.admin_username,
+          admin_email: data.admin_email,
+          role: data.role,
+          is_active: data.is_active,
+        },
+      }));
+      setLastTemp({
+        admin_id: data.admin_id,
+        temp_password: data.temp_password,
+      });
+      setNewAdminName("");
+      setNewAdminEmail("");
+      setNewAdminRole("courseadmin");
+    } catch (e) {
+      setError(e.message || "Failed to create admin");
+    }
   };
 
-  const addAssignLocal = () => {
+  const addAssignRemote = async () => {
     setError("");
     if (!newAssignAdminId || !newAssignClassCode) {
       setError("admin_id and class_code are required");
@@ -153,26 +195,43 @@ const SysAdminDashboard = () => {
         r.admin_id === newAssignAdminId &&
         r.class_code === newAssignClassCode
     );
-    if (!exists) {
+    if (exists) {
+      setError("This assignment already exists");
+      return;
+    }
+    try {
+      await dispatch(
+        assignClassToAdmin(token, newAssignAdminId, newAssignClassCode)
+      );
       setAssigns((prev) => [
         ...prev,
         { admin_id: newAssignAdminId, class_code: newAssignClassCode },
       ]);
+      setNewAssignAdminId("");
+      setNewAssignClassCode("");
+    } catch (e) {
+      setError(e.message || "Failed to add assignment");
     }
-    setNewAssignAdminId("");
-    setNewAssignClassCode("");
   };
 
-  const updateAssignClassLocal = (index, class_code) => {
-    setAssigns((prev) =>
-      prev.map((r, i) =>
-        i === index ? { ...r, class_code } : r
-      )
-    );
-  };
-
-  const deleteAssignLocal = (index) => {
-    setAssigns((prev) => prev.filter((_, i) => i !== index));
+  const deleteAssignRemote = async (admin_id, class_code) => {
+    setError("");
+    try {
+      await dispatch(
+        removeClassAssignment(token, admin_id, class_code)
+      );
+      setAssigns((prev) =>
+        prev.filter(
+          (r) =>
+            !(
+              r.admin_id === admin_id &&
+              r.class_code === class_code
+            )
+        )
+      );
+    } catch (e) {
+      setError(e.message || "Failed to delete assignment");
+    }
   };
 
   return (
@@ -196,6 +255,7 @@ const SysAdminDashboard = () => {
             display: "flex",
             gap: "0.5rem",
             alignItems: "center",
+            flexWrap: "wrap",
           }}
         >
           <input
@@ -210,110 +270,121 @@ const SysAdminDashboard = () => {
             value={newAdminEmail}
             onChange={(e) => setNewAdminEmail(e.target.value)}
           />
-          <input
-            type="text"
-            placeholder="password"
-            value={newAdminEmail}
-            onChange={(e) => setNewAdminEmail(e.target.value)}
-          />
-          <PrimaryButton onClick={createAdminLocal}>
+          <select
+            value={newAdminRole}
+            onChange={(e) => setNewAdminRole(e.target.value)}
+          >
+            <option value="courseadmin">courseadmin</option>
+            <option value="sysadmin">sysadmin</option>
+          </select>
+          <PrimaryButton onClick={createAdminRemote}>
             Create admin
           </PrimaryButton>
         </div>
         {lastTemp && (
           <div style={{ fontSize: 14, marginBottom: "0.5rem" }}>
-            New admin created: ID {lastTemp.admin_id}, temp password{" "}
+            New/updated admin: ID {lastTemp.admin_id}, temp password{" "}
             <code>{lastTemp.temp_password}</code>
           </div>
         )}
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Admin ID</th>
-              <th>Password</th>
-              <th>Username</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>is_active</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {admins.map((a) => {
-              const e = editAdmins[a.admin_id] || {};
-              return (
-                <tr key={a.admin_id}>
-                  <td>{a.admin_id}</td>
-                  <td>hidden</td>
-                  <td>
-                    <input
-                      type="text"
-                      value={e.admin_username || ""}
-                      onChange={(ev) =>
-                        updateEdit(
-                          a.admin_id,
-                          "admin_username",
-                          ev.target.value
-                        )
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="email"
-                      value={e.admin_email || ""}
-                      onChange={(ev) =>
-                        updateEdit(
-                          a.admin_id,
-                          "admin_email",
-                          ev.target.value
-                        )
-                      }
-                    />
-                  </td>
-                  <td>
-                    <select
-                      value={e.role || "courseadmin"}
-                      onChange={(ev) =>
-                        updateEdit(a.admin_id, "role", ev.target.value)
-                      }
-                    >
-                      <option value="sysadmin">sysadmin</option>
-                      <option value="courseadmin">courseadmin</option>
-                    </select>
-                  </td>
-                  <td>
-                    <select
-                      value={String(e.is_active)}
-                      onChange={(ev) =>
-                        updateEdit(
-                          a.admin_id,
-                          "is_active",
-                          ev.target.value
-                        )
-                      }
-                    >
-                      <option value="true">true</option>
-                      <option value="false">false</option>
-                    </select>
-                  </td>
-                  <td>
-                    <PrimaryButton
-                      onClick={() => saveAdminLocal(a.admin_id)}
-                    >
-                      Save
-                    </PrimaryButton>
-                    <DangerButton
-                      onClick={() => deleteAdminLocal(a.admin_id)}
-                    >
-                      Delete
-                    </DangerButton>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {loadingAdmins ? (
+          <div>Loading admins...</div>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Admin ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>is_active</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {admins.map((a) => {
+                const e = editAdmins[a.admin_id] || {};
+                return (
+                  <tr key={a.admin_id}>
+                    <td>{a.admin_id}</td>
+                    <td>
+                      <input
+                        type="text"
+                        value={e.admin_username || ""}
+                        onChange={(ev) =>
+                          updateEdit(
+                            a.admin_id,
+                            "admin_username",
+                            ev.target.value
+                          )
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="email"
+                        value={e.admin_email || ""}
+                        onChange={(ev) =>
+                          updateEdit(
+                            a.admin_id,
+                            "admin_email",
+                            ev.target.value
+                          )
+                        }
+                      />
+                    </td>
+                    <td>
+                      <select
+                        value={e.role || "courseadmin"}
+                        onChange={(ev) =>
+                          updateEdit(
+                            a.admin_id,
+                            "role",
+                            ev.target.value
+                          )
+                        }
+                      >
+                        <option value="sysadmin">sysadmin</option>
+                        <option value="courseadmin">
+                          courseadmin
+                        </option>
+                      </select>
+                    </td>
+                    <td>
+                      <select
+                        value={String(e.is_active)}
+                        onChange={(ev) =>
+                          updateEdit(
+                            a.admin_id,
+                            "is_active",
+                            ev.target.value
+                          )
+                        }
+                      >
+                        <option value="true">true</option>
+                        <option value="false">false</option>
+                      </select>
+                    </td>
+                    <td>
+                      <PrimaryButton
+                        onClick={() => saveAdminRemote(a.admin_id)}
+                      >
+                        Save
+                      </PrimaryButton>
+                      <PrimaryButton
+                        onClick={() =>
+                          handleResetPassword(a.admin_id)
+                        }
+                      >
+                        Reset password
+                      </PrimaryButton>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="admin-section" style={{ marginTop: "2rem" }}>
@@ -324,6 +395,7 @@ const SysAdminDashboard = () => {
             display: "flex",
             gap: "0.5rem",
             alignItems: "center",
+            flexWrap: "wrap",
           }}
         >
           <select
@@ -339,7 +411,9 @@ const SysAdminDashboard = () => {
           </select>
           <select
             value={newAssignClassCode}
-            onChange={(e) => setNewAssignClassCode(e.target.value)}
+            onChange={(e) =>
+              setNewAssignClassCode(e.target.value)
+            }
           >
             <option value="">-- class_code --</option>
             {availableClasses.map((cc) => (
@@ -348,50 +422,43 @@ const SysAdminDashboard = () => {
               </option>
             ))}
           </select>
-          <PrimaryButton onClick={addAssignLocal}>
+          <PrimaryButton onClick={addAssignRemote}>
             Add assignment
           </PrimaryButton>
         </div>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Admin ID</th>
-              <th>Class Code</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {assigns.map((r, idx) => (
-              <tr key={`${r.admin_id}-${idx}`}>
-                <td>{r.admin_id}</td>
-                <td>
-                  <select
-                    value={r.class_code}
-                    onChange={(e) =>
-                      updateAssignClassLocal(idx, e.target.value)
-                    }
-                  >
-                    {availableClasses.map((cc) => (
-                      <option key={cc} value={cc}>
-                        {cc}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td>
-                  <PrimaryButton onClick={() => {}}>
-                    Save
-                  </PrimaryButton>
-                  <DangerButton
-                    onClick={() => deleteAssignLocal(idx)}
-                  >
-                    Delete
-                  </DangerButton>
-                </td>
+        {loadingAssigns ? (
+          <div>Loading assignments...</div>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Admin ID</th>
+                <th>Class Code</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {assigns.map((r, idx) => (
+                <tr key={`${r.admin_id}-${r.class_code}-${idx}`}>
+                  <td>{r.admin_id}</td>
+                  <td>{r.class_code}</td>
+                  <td>
+                    <DangerButton
+                      onClick={() =>
+                        deleteAssignRemote(
+                          r.admin_id,
+                          r.class_code
+                        )
+                      }
+                    >
+                      Delete
+                    </DangerButton>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </>
   );

@@ -15,17 +15,17 @@ def handle_register_options():
     """Handle CORS preflight request for register"""
     return jsonify(status=200)
 
-
 @auth.route('/register', methods=['POST'])
 @cross_origin()
-#insert user to db
 def register():
     privacy_consent = request.json.get('privacy_consent', False)
-    new_user = User(username=request.json.get('username'),
-                    name=request.json.get('name'),
-                    email_address=request.json.get('email_address'),
-                    password=request.json.get('password'),
-                    confirm=privacy_consent)
+    new_user = User(
+        username=request.json.get('username'),
+        name=request.json.get('name'),
+        email_address=request.json.get('email_address'),
+        password=request.json.get('password'),
+        confirm=privacy_consent
+    )
     if new_user.validate_username() and new_user.validate_password():
         db.session.add(new_user)
         db.session.commit()
@@ -55,7 +55,6 @@ def login():
         if password == current_user.password:
             if current_class_code:
                 current_user.class_code = class_code_value
-                # Commit the changes to the database
                 db.session.commit()
                 access_token = create_access_token(identity=username)
                 return jsonify(access_token=access_token, status=200)
@@ -69,8 +68,7 @@ def login():
 
 
 # Register a callback function that takes whatever object is passed in as the
-# identity when creating JWTs and converts it to a JSON serializable format.
-@jwt.user_identity_loader
+# identity when creating JWTs and converts it to a JSON serializable format.@jwt.user_identity_loader
 def user_identity_lookup(user):
     return user
 
@@ -84,11 +82,13 @@ def user_identity_lookup(user):
 # if the user has been deleted from the database).
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
-    identity = jwt_data["sub"]
+    identity = jwt_data.get("sub")
+    role = jwt_data.get("role")
 
+    if role in ("sysadmin", "courseadmin"):
+        return identity
 
-    if isinstance(identity, dict):
+    if identity is None:
         return None
-
 
     return User.query.filter_by(username=identity).one_or_none()

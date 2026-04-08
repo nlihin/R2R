@@ -6,34 +6,45 @@ from functools import wraps
 
 import pandas as pd
 from flask import request, jsonify, send_file
-from flask_cors import cross_origin
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 
 from app import db
 from app.admin import admin_bp
-from app.admin.models_admin import AdminClass
+from app.admin.models_admin import AdminUser, AdminClass
 from app.models import Group, Question, Class_codes
 
-
-# ── helper: only courseadmin/sysadmin, must not require password change ──
 def require_classadmin(f):
     @wraps(f)
     @jwt_required()
     def decorated(*args, **kwargs):
-        identity = get_jwt_identity()
-        if not isinstance(identity, dict):
+        admin_id = get_jwt_identity()
+        claims = get_jwt()
+
+        if not admin_id:
             return jsonify(msg="Invalid admin token"), 401
 
-        role = identity.get("role")
-        must_change = identity.get("must_change_password")
+        role = claims.get("role")
+        must_change = claims.get("must_change_password")
+
+        admin_row = db.session.get(AdminUser, admin_id)
+        if not admin_row or not admin_row.is_active:
+            return jsonify(msg="Invalid admin token"), 401
+        if admin_row.role != role:
+            return jsonify(msg="Forbidden"), 403
 
         if role not in ("courseadmin", "sysadmin"):
             return jsonify(msg="Forbidden"), 403
-        if must_change:
+        if must_change or admin_row.must_change_password:
             return jsonify(
                 msg="must_change_password",
                 code="MUST_CHANGE_PASSWORD"
             ), 403
+
+        identity = {
+            "admin_id": admin_id,
+            "role": role,
+            "must_change_password": False,
+        }
 
         return f(identity, *args, **kwargs)
 
@@ -50,9 +61,8 @@ def _check_class_access(admin_id: str, class_code: str, role: str) -> bool:
     )
 
 
-# ── my-classes ───────────────────────────────────────────────────────────
+
 @admin_bp.route("/my-classes", methods=["GET", "OPTIONS"])
-@cross_origin()
 @require_classadmin
 def my_classes(identity):
     role = identity["role"]
@@ -70,10 +80,7 @@ def my_classes(identity):
     )
     return jsonify(data=[r.class_code for r in rows]), 200
 
-
-# ── groups ───────────────────────────────────────────────────────────────
 @admin_bp.route("/classes/<class_code>/groups", methods=["GET", "OPTIONS"])
-@cross_origin()
 @require_classadmin
 def get_groups(identity, class_code):
     admin_id = identity["admin_id"]
@@ -96,7 +103,6 @@ def get_groups(identity, class_code):
 
 
 @admin_bp.route("/classes/<class_code>/groups", methods=["POST"])
-@cross_origin()
 @require_classadmin
 def save_groups(identity, class_code):
     admin_id = identity["admin_id"]
@@ -142,7 +148,6 @@ def save_groups(identity, class_code):
     "/classes/<class_code>/groups/csv-template",
     methods=["GET", "OPTIONS"],
 )
-@cross_origin()
 @require_classadmin
 def groups_csv_template(identity, class_code):
     admin_id = identity["admin_id"]
@@ -169,7 +174,6 @@ def groups_csv_template(identity, class_code):
     "/classes/<class_code>/groups/import-csv",
     methods=["POST", "OPTIONS"],
 )
-@cross_origin()
 @require_classadmin
 def import_groups_csv(identity, class_code):
     admin_id = identity["admin_id"]
@@ -204,9 +208,7 @@ def import_groups_csv(identity, class_code):
     return jsonify(msg=f"Imported {len(df)} rows"), 200
 
 
-# ── questions ───────────────────────────────────────────────────────────
 @admin_bp.route("/classes/<class_code>/questions", methods=["GET", "OPTIONS"])
-@cross_origin()
 @require_classadmin
 def get_questions(identity, class_code):
     admin_id = identity["admin_id"]
@@ -233,7 +235,6 @@ def get_questions(identity, class_code):
 
 
 @admin_bp.route("/classes/<class_code>/questions", methods=["POST"])
-@cross_origin()
 @require_classadmin
 def save_questions(identity, class_code):
     admin_id = identity["admin_id"]
@@ -262,9 +263,7 @@ def save_questions(identity, class_code):
     ), 200
 
 
-# ── download data ───────────────────────────────────────────────────────
 @admin_bp.route("/classes/<class_code>/download", methods=["POST"])
-@cross_origin()
 @require_classadmin
 def download_data(identity, class_code):
     admin_id = identity["admin_id"]

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { clearMustChange } from "../../store/admin/admin-Slice";
+import { loginAdmin } from "../../store/admin/admin-Slice";
 import { AdminWrapper, AdminCard, PrimaryButton, ErrorMsg } from "./AdminStyles";
 import { BaseURL } from "../../routes/url";
 
@@ -28,7 +28,17 @@ const ChangePassword = () => {
     const data = await res.json();
     if (!res.ok) { setError(data.msg); return; }
     setSuccess(true);
-    dispatch(clearMustChange());
+    if (data.access_token) {
+      dispatch(
+        loginAdmin({
+          token: data.access_token,
+          role: data.role,
+          mustChangePassword: Boolean(data.must_change_password),
+          adminId: data.admin_id,
+          adminUsername: data.admin_username,
+        })
+      );
+    }
     setTimeout(() => navigate("/admin/dashboard"), 1500);
   };
 

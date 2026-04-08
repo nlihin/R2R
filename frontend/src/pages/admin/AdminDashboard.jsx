@@ -13,6 +13,7 @@ const AdminDashboard = () => {
     adminState.token || localStorage.getItem("adminToken") || null;
   const role =
     adminState.role || localStorage.getItem("adminRole") || null;
+  const mustChangePassword = Boolean(adminState.mustChangePassword);
 
   const navigate = useNavigate();
 
@@ -22,7 +23,14 @@ const AdminDashboard = () => {
     }
   }, [token, navigate]);
 
+  useEffect(() => {
+    if (token && mustChangePassword) {
+      navigate("/admin/change-password", { replace: true });
+    }
+  }, [token, mustChangePassword, navigate]);
+
   if (!token) return null;
+  if (mustChangePassword) return null;
 
   const title =
     role === "sysadmin" ? "System Admin" : "Course Admin";
