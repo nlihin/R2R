@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { loginAdmin } from "../../store/admin/admin-Slice";
 import { AdminWrapper, AdminCard, PrimaryButton, ErrorMsg } from "./AdminStyles";
+import PasswordField from "./PasswordField";
 import { BaseURL } from "../../routes/url";
 
 
@@ -73,12 +74,12 @@ const AdminLogin = () => {
             onChange={(e) => setAdminId(e.target.value.replace(/\D/g, "").slice(0, 9))}
             required
           />
-          <input
-            type="password"
+          <PasswordField
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            autoComplete="current-password"
           />
           {error && <ErrorMsg>{error}</ErrorMsg>}
           <PrimaryButton type="submit" disabled={loading}>

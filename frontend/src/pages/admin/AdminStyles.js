@@ -46,37 +46,98 @@ export const AdminCard = styled.div`
   }
 `;
 
+export const AdminShell = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  background-color: rgba(36, 36, 36, 1);
+  color: rgba(255, 255, 255, 0.87);
+  padding: 0;
+  box-sizing: border-box;
+`;
+
 export const AdminDashboardWrapper = styled.div`
   width: 100%;
-  max-width: 960px;
+  max-width: 1160px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 1.5rem 1rem 2.5rem;
+  flex: 1 0 auto;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  min-width: 0;
+
+  @media (min-width: 992px) {
+    padding: 1.75rem 1.5rem 3rem;
+  }
 `;
 
 export const AdminNavbar = styled.nav`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   width: 100%;
-  padding: 0.75rem 2rem;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  padding: 0.75rem 1rem;
   background-color: rgba(180, 172, 172, 0.6);
   border-bottom: 1px solid #000;
-  margin-bottom: 2rem;
+
+  @media (max-width: 991px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  @media (min-width: 992px) {
+    padding: 0.75rem 1.5rem;
+  }
+
+  .admin-navbar-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
 
   h2 {
     color: var(--color-primary-300);
-    font-size: 1.2rem;
+    font-size: 1.05rem;
+    margin: 0;
+    line-height: 1.3;
   }
 
-  button {
-    background-color: rgb(20, 124, 194);
-    border: 1px solid #fff;
-    color: #fff;
-    padding: 5px 20px;
-    cursor: pointer;
-    border-radius: 3px;
-    font: inherit;
+  @media (min-width: 992px) {
+    h2 {
+      font-size: 1.2rem;
+    }
   }
+
+  .admin-navbar-sub {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.72);
+    line-height: 1.3;
+  }
+`;
+
+export const AdminFooter = styled.footer`
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-top: auto;
+  padding: 1rem 1rem 1.5rem;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.42);
+  border-top: 1px solid var(--color-gray-700);
+  overflow-x: hidden;
+  overflow-wrap: break-word;
 `;
 
 export const PrimaryButton = styled.button`
@@ -92,6 +153,17 @@ export const PrimaryButton = styled.button`
 
   &:hover { background-color: var(--color-primary-600); }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
+`;
+
+export const HeaderLogoutButton = styled(PrimaryButton)`
+  min-width: auto;
+  padding: 0.45rem 1.15rem;
+  flex-shrink: 0;
+
+  @media (max-width: 991px) {
+    width: 100%;
+    min-height: 2.75rem;
+  }
 `;
 
 export const SecondaryButton = styled.button`
@@ -119,17 +191,9 @@ export const DangerButton = styled.button`
   &:hover { background-color: rgba(229, 115, 115, 0.1); }
 `;
 
-export const ClassSelector = styled.select`
-  padding: 0.5rem 1rem;
-  background-color: var(--color-gray-700);
-  border: 1px solid var(--color-gray-500);
-  border-radius: 4px;
-  color: inherit;
-  font: inherit;
-  font-size: 15px;
-  min-width: 200px;
-
-  &:focus { outline: none; border-color: var(--color-primary-400); }
+/* Visual shell matches .admin-select in admin.scss (native select only). */
+export const ClassSelector = styled.select.attrs({ className: "admin-select" })`
+  box-sizing: border-box;
 `;
 
 export const ErrorMsg = styled.p`

@@ -1,19 +1,28 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import { AdminWrapper, AdminNavbar, AdminDashboardWrapper } from "./AdminStyles";
+import { useDispatch, useSelector } from "react-redux";
+import { logoutAdmin } from "../../store/admin/admin-Slice";
+import {
+  AdminShell,
+  AdminNavbar,
+  AdminDashboardWrapper,
+  AdminFooter,
+  HeaderLogoutButton,
+} from "./AdminStyles";
 import "../../styles/admin.scss";
 
 import SysAdminDashboard from "./SysAdminDashboard";
 import CourseAdminDashboard from "./CourseAdminDashboard";
 
 const AdminDashboard = () => {
+  const dispatch = useDispatch();
   const adminState = useSelector((s) => s.admin || {});
   const token =
     adminState.token || localStorage.getItem("adminToken") || null;
   const role =
     adminState.role || localStorage.getItem("adminRole") || null;
   const mustChangePassword = Boolean(adminState.mustChangePassword);
+  const adminUsername = adminState.adminUsername || "";
 
   const navigate = useNavigate();
 
@@ -35,12 +44,25 @@ const AdminDashboard = () => {
   const title =
     role === "sysadmin" ? "System Admin" : "Course Admin";
 
+  const handleLogout = () => {
+    dispatch(logoutAdmin());
+    navigate("/admin/login");
+  };
+
   return (
-    <AdminWrapper
-      style={{ justifyContent: "flex-start", alignItems: "stretch" }}
-    >
+    <AdminShell>
       <AdminNavbar>
-        <h2>R2R Admin — {title}</h2>
+        <div className="admin-navbar-titles">
+          <h2>R2R Admin — {title}</h2>
+          {adminUsername ? (
+            <span className="admin-navbar-sub">
+              Signed in as {adminUsername}
+            </span>
+          ) : null}
+        </div>
+        <HeaderLogoutButton type="button" onClick={handleLogout}>
+          Logout
+        </HeaderLogoutButton>
       </AdminNavbar>
 
       <AdminDashboardWrapper>
@@ -50,7 +72,11 @@ const AdminDashboard = () => {
           <CourseAdminDashboard />
         )}
       </AdminDashboardWrapper>
-    </AdminWrapper>
+
+      <AdminFooter>
+        R2R admin. Credits: Sergei Shavrin
+      </AdminFooter>
+    </AdminShell>
   );
 };
 

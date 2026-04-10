@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { logoutAdmin } from "../../store/admin/admin-Slice";
 import {
   ClassSelector,
   PrimaryButton,
   DangerButton,
 } from "./AdminStyles";
+import AdminStatusBanner from "./AdminStatusBanner";
 import {
   fetchMyClasses,
   fetchGroups,
@@ -52,16 +52,19 @@ const triggerBlobDownload = (blob, filename) => {
   URL.revokeObjectURL(url);
 };
 
-const GroupsTable = ({ classCode, token, dispatch }) => {
+const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
   const [rows, setRows] = useState([]);
   const [savedAt, setSavedAt] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts = {}) => {
+    const silent = Boolean(opts.silent);
     if (!classCode || !token) return;
-    setLoading(true);
-    setError("");
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
     try {
       const data = await dispatch(fetchGroups(token, classCode));
       setRows(
@@ -74,7 +77,9 @@ const GroupsTable = ({ classCode, token, dispatch }) => {
     } catch (e) {
       setError(e.message || "Failed to load groups");
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [classCode, token, dispatch]);
 
@@ -116,7 +121,8 @@ const GroupsTable = ({ classCode, token, dispatch }) => {
     try {
       const out = await dispatch(saveGroups(token, classCode, groups));
       setSavedAt(out.saved_at || "");
-      await load();
+      await load({ silent: true });
+      if (typeof onSaveSuccess === "function") onSaveSuccess();
     } catch (e) {
       setError(e.message || "Failed to save groups");
     }
@@ -125,15 +131,19 @@ const GroupsTable = ({ classCode, token, dispatch }) => {
   return (
     <div className="admin-section">
       <h3>Groups</h3>
-      {error && (
-        <p style={{ color: "#e57373", fontSize: 13, marginBottom: "0.5rem" }}>
-          {error}
-        </p>
-      )}
+      {error ? (
+        <div className="admin-message-area">
+          <p className="admin-inline-msg admin-inline-msg--error" role="alert">
+            {error}
+          </p>
+        </div>
+      ) : null}
       {loading ? (
-        <div>Loading groups…</div>
+        <p className="admin-inline-msg admin-inline-msg--muted">Loading groups…</p>
       ) : (
         <>
+          <div className="admin-section__data">
+          <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
@@ -165,7 +175,7 @@ const GroupsTable = ({ classCode, token, dispatch }) => {
                       }
                     />
                   </td>
-                  <td>
+                  <td className="admin-table__action-cell">
                     <DangerButton type="button" onClick={() => deleteRow(idx)}>
                       Delete
                     </DangerButton>
@@ -174,6 +184,8 @@ const GroupsTable = ({ classCode, token, dispatch }) => {
               ))}
             </tbody>
           </table>
+          </div>
+          </div>
           <div className="admin-save-bar">
             <PrimaryButton type="button" onClick={addRow}>
               + Add Row
@@ -181,9 +193,9 @@ const GroupsTable = ({ classCode, token, dispatch }) => {
             <PrimaryButton type="button" onClick={save}>
               Save
             </PrimaryButton>
-            {savedAt && (
+            {savedAt ? (
               <span className="saved-timestamp">✓ Saved at {savedAt}</span>
-            )}
+            ) : null}
           </div>
         </>
       )}
@@ -191,16 +203,19 @@ const GroupsTable = ({ classCode, token, dispatch }) => {
   );
 };
 
-const QuestionsTable = ({ classCode, token, dispatch }) => {
+const QuestionsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
   const [rows, setRows] = useState([]);
   const [savedAt, setSavedAt] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts = {}) => {
+    const silent = Boolean(opts.silent);
     if (!classCode || !token) return;
-    setLoading(true);
-    setError("");
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
     try {
       const data = await dispatch(fetchQuestions(token, classCode));
       setRows(
@@ -213,7 +228,9 @@ const QuestionsTable = ({ classCode, token, dispatch }) => {
     } catch (e) {
       setError(e.message || "Failed to load questions");
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [classCode, token, dispatch]);
 
@@ -255,7 +272,8 @@ const QuestionsTable = ({ classCode, token, dispatch }) => {
         saveQuestions(token, classCode, questions)
       );
       setSavedAt(out.saved_at || "");
-      await load();
+      await load({ silent: true });
+      if (typeof onSaveSuccess === "function") onSaveSuccess();
     } catch (e) {
       setError(e.message || "Failed to save questions");
     }
@@ -264,15 +282,21 @@ const QuestionsTable = ({ classCode, token, dispatch }) => {
   return (
     <div className="admin-section">
       <h3>Questions (max 3)</h3>
-      {error && (
-        <p style={{ color: "#e57373", fontSize: 13, marginBottom: "0.5rem" }}>
-          {error}
-        </p>
-      )}
+      {error ? (
+        <div className="admin-message-area">
+          <p className="admin-inline-msg admin-inline-msg--error" role="alert">
+            {error}
+          </p>
+        </div>
+      ) : null}
       {loading ? (
-        <div>Loading questions…</div>
+        <p className="admin-inline-msg admin-inline-msg--muted">
+          Loading questions…
+        </p>
       ) : (
         <>
+          <div className="admin-section__data">
+          <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
@@ -292,7 +316,7 @@ const QuestionsTable = ({ classCode, token, dispatch }) => {
                       onChange={(e) => updateRow(idx, e.target.value)}
                     />
                   </td>
-                  <td>
+                  <td className="admin-table__action-cell">
                     <DangerButton type="button" onClick={() => deleteRow(idx)}>
                       Delete
                     </DangerButton>
@@ -301,6 +325,8 @@ const QuestionsTable = ({ classCode, token, dispatch }) => {
               ))}
             </tbody>
           </table>
+          </div>
+          </div>
           <div className="admin-save-bar">
             <PrimaryButton
               type="button"
@@ -312,9 +338,9 @@ const QuestionsTable = ({ classCode, token, dispatch }) => {
             <PrimaryButton type="button" onClick={save}>
               Save
             </PrimaryButton>
-            {savedAt && (
+            {savedAt ? (
               <span className="saved-timestamp">✓ Saved at {savedAt}</span>
-            )}
+            ) : null}
           </div>
         </>
       )}
@@ -362,29 +388,16 @@ const Downloads = ({ classCode, token, dispatch }) => {
   return (
     <div className="admin-section">
       <h3>Download Data</h3>
-      {error && (
-        <p style={{ color: "#e57373", fontSize: 13, marginBottom: "0.5rem" }}>
-          {error}
-        </p>
-      )}
-      <div
-        style={{
-          display: "flex",
-          gap: "1.5rem",
-          marginBottom: "1rem",
-          flexWrap: "wrap",
-        }}
-      >
+      {error ? (
+        <div className="admin-message-area">
+          <p className="admin-inline-msg admin-inline-msg--error" role="alert">
+            {error}
+          </p>
+        </div>
+      ) : null}
+      <div className="admin-download-options">
         {options.map((ds) => (
-          <label
-            key={ds}
-            style={{
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.4rem",
-            }}
-          >
+          <label key={ds}>
             <input
               type="checkbox"
               checked={selected.includes(ds)}
@@ -394,17 +407,19 @@ const Downloads = ({ classCode, token, dispatch }) => {
           </label>
         ))}
       </div>
-      <PrimaryButton
-        type="button"
-        onClick={download}
-        disabled={!selected.length || loading}
-      >
-        {loading
-          ? "Preparing..."
-          : selected.length > 1
-          ? "Download ZIP"
-          : "Download CSV"}
-      </PrimaryButton>
+      <div className="admin-download-toolbar">
+        <PrimaryButton
+          type="button"
+          onClick={download}
+          disabled={!selected.length || loading}
+        >
+          {loading
+            ? "Preparing..."
+            : selected.length > 1
+            ? "Download ZIP"
+            : "Download CSV"}
+        </PrimaryButton>
+      </div>
     </div>
   );
 };
@@ -425,8 +440,6 @@ const CourseAdminDashboard = () => {
   const adminState = useSelector((s) => s.admin || {});
   const token =
     adminState.token || localStorage.getItem("adminToken") || null;
-  const adminUsername = adminState.adminUsername || "";
-
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -434,6 +447,13 @@ const CourseAdminDashboard = () => {
   const [selectedClass, setSelectedClass] = useState(null);
   const [classesError, setClassesError] = useState("");
   const [loadingClasses, setLoadingClasses] = useState(false);
+  const [pageSuccess, setPageSuccess] = useState("");
+
+  useEffect(() => {
+    if (!pageSuccess) return undefined;
+    const t = window.setTimeout(() => setPageSuccess(""), 5000);
+    return () => window.clearTimeout(t);
+  }, [pageSuccess]);
 
   useEffect(() => {
     if (!token) {
@@ -475,58 +495,49 @@ const CourseAdminDashboard = () => {
     }
   }, [classes, selectedClass]);
 
-  const handleLogout = () => {
-    dispatch(logoutAdmin());
-    navigate("/admin/login");
+  useEffect(() => {
+    setPageSuccess("");
+  }, [selectedClass]);
+
+  const notifySaveSuccess = () => {
+    setPageSuccess("Changes saved successfully.");
   };
 
   return (
     <>
+      {pageSuccess ? (
+        <AdminStatusBanner message={pageSuccess} />
+      ) : null}
       <div className="admin-section">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div>
-            <h3>Class Admin</h3>
-            {adminUsername ? (
-              <div style={{ fontSize: 12 }}>
-                Signed in as {adminUsername}
-              </div>
-            ) : null}
-          </div>
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
+        <h3>Class Admin</h3>
 
         {loadingClasses ? (
-          <p style={{ fontSize: 14, marginTop: "0.75rem" }}>
+          <p className="admin-inline-msg admin-inline-msg--muted">
             Loading classes…
           </p>
         ) : classesError ? (
-          <p style={{ color: "#e57373", fontSize: 14, marginTop: "0.75rem" }}>
-            {classesError}
-          </p>
+          <div className="admin-message-area">
+            <p className="admin-inline-msg admin-inline-msg--error" role="alert">
+              {classesError}
+            </p>
+          </div>
         ) : classes.length === 0 ? (
-          <p style={{ fontSize: 14, marginTop: "0.75rem" }}>
+          <p className="admin-inline-msg admin-inline-msg--muted">
             No classes assigned to this admin.
           </p>
         ) : (
-          <ClassSelector
-            style={{ marginTop: "0.75rem" }}
-            value={selectedClass || ""}
-            onChange={(e) => setSelectedClass(e.target.value || null)}
-          >
-            {classes.map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </ClassSelector>
+          <div className="admin-class-picker">
+            <ClassSelector
+              value={selectedClass || ""}
+              onChange={(e) => setSelectedClass(e.target.value || null)}
+            >
+              {classes.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </ClassSelector>
+          </div>
         )}
       </div>
 
@@ -536,11 +547,13 @@ const CourseAdminDashboard = () => {
             classCode={selectedClass}
             token={token}
             dispatch={dispatch}
+            onSaveSuccess={notifySaveSuccess}
           />
           <QuestionsTable
             classCode={selectedClass}
             token={token}
             dispatch={dispatch}
+            onSaveSuccess={notifySaveSuccess}
           />
           <Downloads
             classCode={selectedClass}

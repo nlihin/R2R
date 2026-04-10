@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { loginAdmin } from "../../store/admin/admin-Slice";
 import { AdminWrapper, AdminCard, PrimaryButton, ErrorMsg } from "./AdminStyles";
+import PasswordField from "./PasswordField";
 import { BaseURL } from "../../routes/url";
 
 const ChangePassword = () => {
@@ -67,8 +68,20 @@ const ChangePassword = () => {
           <br />Min 12 chars, uppercase, lowercase, digit.
         </p>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <input type="password" placeholder="Current password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
-          <input type="password" placeholder="New password (12+ chars)" value={next} onChange={(e) => setNext(e.target.value)} required />
+          <PasswordField
+            placeholder="Current password"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            required
+            autoComplete="current-password"
+          />
+          <PasswordField
+            placeholder="New password (12+ chars)"
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+            required
+            autoComplete="new-password"
+          />
           {error && <ErrorMsg>{error}</ErrorMsg>}
           <PrimaryButton type="submit">Change Password</PrimaryButton>
         </form>

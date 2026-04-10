@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { logoutAdmin } from "../../store/admin/admin-Slice";
 import {
   PrimaryButton,
   DangerButton,
-  ErrorMsg,
 } from "./AdminStyles";
 import {
   fetchAdmins,
@@ -17,6 +15,8 @@ import {
   removeClassAssignment,
   fetchAvailableClasses,
 } from "../../store/admin/admin-Actions";
+import { isValidAdminEmail } from "./adminValidation";
+import AdminStatusBanner from "./AdminStatusBanner";
 
 const SysAdminDashboard = () => {
   const adminState = useSelector((s) => s.admin || {});
@@ -39,6 +39,15 @@ const SysAdminDashboard = () => {
   const [error, setError] = useState("");
   const [loadingAdmins, setLoadingAdmins] = useState(false);
   const [loadingAssigns, setLoadingAssigns] = useState(false);
+  const [successBanner, setSuccessBanner] = useState("");
+  const [addFormEmailError, setAddFormEmailError] = useState("");
+  const [rowEmailSaveError, setRowEmailSaveError] = useState(null);
+
+  useEffect(() => {
+    if (!successBanner) return undefined;
+    const t = window.setTimeout(() => setSuccessBanner(""), 5000);
+    return () => window.clearTimeout(t);
+  }, [successBanner]);
 
   useEffect(() => {
     if (!token) {
@@ -49,6 +58,7 @@ const SysAdminDashboard = () => {
 
     const load = async () => {
       setError("");
+      setAddFormEmailError("");
       setLoadingAdmins(true);
       setLoadingAssigns(true);
       try {
@@ -93,27 +103,43 @@ const SysAdminDashboard = () => {
     };
   }, [token, navigate, dispatch]);
 
-  const handleLogout = () => {
-    dispatch(logoutAdmin());
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminRole");
-    navigate("/admin/login");
-  };
-
   const updateEdit = (admin_id, field, value) => {
+    const nextVal = field === "is_active" ? value === "true" : value;
     setEditAdmins((prev) => ({
       ...prev,
       [admin_id]: {
         ...prev[admin_id],
-        [field]: field === "is_active" ? value === "true" : value,
+        [field]: nextVal,
       },
     }));
+    if (field === "admin_email" && isValidAdminEmail(nextVal)) {
+      setRowEmailSaveError((prev) =>
+        prev && prev.adminId === admin_id ? null : prev
+      );
+    }
   };
 
   const saveAdminRemote = async (admin_id) => {
     setError("");
+    setSuccessBanner("");
     const payload = editAdmins[admin_id];
     if (!payload) return;
+    const email = String(payload.admin_email ?? "").trim();
+    if (!email) {
+      setRowEmailSaveError({
+        adminId: admin_id,
+        message: "Email is required.",
+      });
+      return;
+    }
+    if (!isValidAdminEmail(email)) {
+      setRowEmailSaveError({
+        adminId: admin_id,
+        message: "Please enter a valid email address.",
+      });
+      return;
+    }
+    setRowEmailSaveError(null);
     try {
       await dispatch(updateAdmin(token, admin_id, payload));
       setAdmins((prev) =>
@@ -129,6 +155,7 @@ const SysAdminDashboard = () => {
             : a
         )
       );
+      setSuccessBanner("Changes saved successfully.");
     } catch (e) {
       setError(e.message || "Failed to save admin");
     }
@@ -136,6 +163,7 @@ const SysAdminDashboard = () => {
 
   const handleResetPassword = async (admin_id) => {
     setError("");
+    setSuccessBanner("");
     try {
       const data = await dispatch(resetAdminPassword(token, admin_id));
       setLastTemp({
@@ -149,16 +177,28 @@ const SysAdminDashboard = () => {
 
   const createAdminRemote = async () => {
     setError("");
+    setSuccessBanner("");
     setLastTemp(null);
-    if (!newAdminName || !newAdminEmail) {
-      setError("Username and email are required");
+    setAddFormEmailError("");
+    if (!newAdminName.trim()) {
+      setError("Username is required.");
+      return;
+    }
+    if (!newAdminEmail.trim()) {
+      setError("");
+      setAddFormEmailError("Email is required.");
+      return;
+    }
+    if (!isValidAdminEmail(newAdminEmail)) {
+      setError("");
+      setAddFormEmailError("Please enter a valid email address.");
       return;
     }
     try {
       const data = await dispatch(
         createAdmin(token, {
           admin_username: newAdminName,
-          admin_email: newAdminEmail,
+          admin_email: newAdminEmail.trim(),
           role: newAdminRole,
         })
       );
@@ -179,13 +219,17 @@ const SysAdminDashboard = () => {
       setNewAdminName("");
       setNewAdminEmail("");
       setNewAdminRole("courseadmin");
+      setAddFormEmailError("");
+      setSuccessBanner("Admin added successfully.");
     } catch (e) {
-      setError(e.message || "Failed to create admin");
+      setError(e.message || "Failed to add admin");
     }
   };
 
   const addAssignRemote = async () => {
     setError("");
+    setAddFormEmailError("");
+    setSuccessBanner("");
     if (!newAssignAdminId || !newAssignClassCode) {
       setError("admin_id and class_code are required");
       return;
@@ -216,6 +260,8 @@ const SysAdminDashboard = () => {
 
   const deleteAssignRemote = async (admin_id, class_code) => {
     setError("");
+    setAddFormEmailError("");
+    setSuccessBanner("");
     try {
       await dispatch(
         removeClassAssignment(token, admin_id, class_code)
@@ -236,74 +282,82 @@ const SysAdminDashboard = () => {
 
   return (
     <>
-      <div
-        className="admin-section"
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <h3>Course Admins</h3>
-        <button onClick={handleLogout}>Logout</button>
-      </div>
+      {successBanner ? (
+        <AdminStatusBanner message={successBanner} />
+      ) : null}
       <div className="admin-section">
-        {error && <ErrorMsg>{error}</ErrorMsg>}
-        <div
-          style={{
-            marginBottom: "0.5rem",
-            display: "flex",
-            gap: "0.5rem",
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
+        <h3>Course Admins</h3>
+        {error || addFormEmailError ? (
+          <div className="admin-message-area">
+            <p className="admin-inline-msg admin-inline-msg--error" role="alert">
+              {error || addFormEmailError}
+            </p>
+          </div>
+        ) : null}
+        <div className="admin-form-toolbar admin-form-toolbar--add-admin">
           <input
+            className="admin-text-input admin-add-admin-username"
             type="text"
             placeholder="Username"
             value={newAdminName}
             onChange={(e) => setNewAdminName(e.target.value)}
           />
           <input
+            className={`admin-text-input admin-add-admin-email${
+              addFormEmailError ? " admin-text-input--error" : ""
+            }`}
             type="email"
             placeholder="Email"
             value={newAdminEmail}
-            onChange={(e) => setNewAdminEmail(e.target.value)}
+            onChange={(e) => {
+              setNewAdminEmail(e.target.value);
+              if (addFormEmailError) setAddFormEmailError("");
+            }}
+            aria-invalid={addFormEmailError ? "true" : "false"}
           />
           <select
+            className="admin-select admin-select--add-admin-role"
             value={newAdminRole}
             onChange={(e) => setNewAdminRole(e.target.value)}
           >
             <option value="courseadmin">courseadmin</option>
             <option value="sysadmin">sysadmin</option>
           </select>
-          <PrimaryButton onClick={createAdminRemote}>
-            Create admin
+          <PrimaryButton type="button" onClick={createAdminRemote}>
+            Add admin
           </PrimaryButton>
         </div>
-        {lastTemp && (
-          <div style={{ fontSize: 14, marginBottom: "0.5rem" }}>
+        {lastTemp ? (
+          <div
+            className="admin-inline-msg admin-inline-msg--success"
+            role="status"
+          >
             New/updated admin: ID {lastTemp.admin_id}, temp password{" "}
             <code>{lastTemp.temp_password}</code>
           </div>
-        )}
+        ) : null}
         {loadingAdmins ? (
-          <div>Loading admins...</div>
+          <p className="admin-inline-msg admin-inline-msg--muted">Loading admins…</p>
         ) : (
+          <div className="admin-section__data">
+          <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
                 <th>Admin ID</th>
                 <th>Username</th>
                 <th>Email</th>
-                <th>Role</th>
-                <th>is_active</th>
-                <th>Actions</th>
+                <th className="admin-col-role">Role</th>
+                <th className="admin-col-active">is_active</th>
+                <th className="admin-col-actions">Actions</th>
               </tr>
             </thead>
             <tbody>
               {admins.map((a) => {
                 const e = editAdmins[a.admin_id] || {};
+                const emailRowErr =
+                  rowEmailSaveError &&
+                  rowEmailSaveError.adminId === a.admin_id;
                 return (
                   <tr key={a.admin_id}>
                     <td>{a.admin_id}</td>
@@ -321,20 +375,35 @@ const SysAdminDashboard = () => {
                       />
                     </td>
                     <td>
-                      <input
-                        type="email"
-                        value={e.admin_email || ""}
-                        onChange={(ev) =>
-                          updateEdit(
-                            a.admin_id,
-                            "admin_email",
-                            ev.target.value
-                          )
+                      <div
+                        className={
+                          emailRowErr
+                            ? "admin-email-cell admin-email-cell--error"
+                            : "admin-email-cell"
                         }
-                      />
+                      >
+                        <input
+                          type="email"
+                          value={e.admin_email || ""}
+                          onChange={(ev) =>
+                            updateEdit(
+                              a.admin_id,
+                              "admin_email",
+                              ev.target.value
+                            )
+                          }
+                          aria-invalid={emailRowErr ? "true" : "false"}
+                        />
+                        {emailRowErr ? (
+                          <span className="admin-field-error-text" role="alert">
+                            {rowEmailSaveError.message}
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
-                    <td>
+                    <td className="admin-col-role-cell">
                       <select
+                        className="admin-select admin-select--table-narrow"
                         value={e.role || "courseadmin"}
                         onChange={(ev) =>
                           updateEdit(
@@ -350,8 +419,9 @@ const SysAdminDashboard = () => {
                         </option>
                       </select>
                     </td>
-                    <td>
+                    <td className="admin-col-active-cell">
                       <select
+                        className="admin-select admin-select--table-narrow"
                         value={String(e.is_active)}
                         onChange={(ev) =>
                           updateEdit(
@@ -365,40 +435,39 @@ const SysAdminDashboard = () => {
                         <option value="false">false</option>
                       </select>
                     </td>
-                    <td>
-                      <PrimaryButton
-                        onClick={() => saveAdminRemote(a.admin_id)}
-                      >
-                        Save
-                      </PrimaryButton>
-                      <PrimaryButton
-                        onClick={() =>
-                          handleResetPassword(a.admin_id)
-                        }
-                      >
-                        Reset password
-                      </PrimaryButton>
+                    <td className="admin-col-actions-cell">
+                      <span className="admin-inline-actions admin-inline-actions--table-row">
+                        <PrimaryButton
+                          type="button"
+                          onClick={() => saveAdminRemote(a.admin_id)}
+                        >
+                          Save
+                        </PrimaryButton>
+                        <PrimaryButton
+                          type="button"
+                          onClick={() =>
+                            handleResetPassword(a.admin_id)
+                          }
+                        >
+                          Reset password
+                        </PrimaryButton>
+                      </span>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+          </div>
+          </div>
         )}
       </div>
 
-      <div className="admin-section" style={{ marginTop: "2rem" }}>
+      <div className="admin-section">
         <h3>Assign classes to admins</h3>
-        <div
-          style={{
-            marginBottom: "0.5rem",
-            display: "flex",
-            gap: "0.5rem",
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
+        <div className="admin-form-toolbar">
           <select
+            className="admin-select"
             value={newAssignAdminId}
             onChange={(e) => setNewAssignAdminId(e.target.value)}
           >
@@ -410,6 +479,7 @@ const SysAdminDashboard = () => {
             ))}
           </select>
           <select
+            className="admin-select"
             value={newAssignClassCode}
             onChange={(e) =>
               setNewAssignClassCode(e.target.value)
@@ -422,13 +492,17 @@ const SysAdminDashboard = () => {
               </option>
             ))}
           </select>
-          <PrimaryButton onClick={addAssignRemote}>
+          <PrimaryButton type="button" onClick={addAssignRemote}>
             Add assignment
           </PrimaryButton>
         </div>
         {loadingAssigns ? (
-          <div>Loading assignments...</div>
+          <p className="admin-inline-msg admin-inline-msg--muted">
+            Loading assignments…
+          </p>
         ) : (
+          <div className="admin-section__data">
+          <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
@@ -442,8 +516,9 @@ const SysAdminDashboard = () => {
                 <tr key={`${r.admin_id}-${r.class_code}-${idx}`}>
                   <td>{r.admin_id}</td>
                   <td>{r.class_code}</td>
-                  <td>
+                  <td className="admin-table__action-cell">
                     <DangerButton
+                      type="button"
                       onClick={() =>
                         deleteAssignRemote(
                           r.admin_id,
@@ -458,6 +533,8 @@ const SysAdminDashboard = () => {
               ))}
             </tbody>
           </table>
+          </div>
+          </div>
         )}
       </div>
     </>
