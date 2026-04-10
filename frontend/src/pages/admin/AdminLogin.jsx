@@ -36,9 +36,6 @@ const AdminLogin = () => {
         return;
       }
 
-      localStorage.setItem("adminToken", data.access_token);
-      localStorage.setItem("adminRole", data.role);
-
       dispatch(
         loginAdmin({
           token: data.access_token,

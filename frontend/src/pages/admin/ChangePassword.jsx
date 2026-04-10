@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { loginAdmin } from "../../store/admin/admin-Slice";
+import { loginAdmin, clearMustChange } from "../../store/admin/admin-Slice";
 import { AdminWrapper, AdminCard, PrimaryButton, ErrorMsg } from "./AdminStyles";
 import PasswordField from "./PasswordField";
 import { BaseURL } from "../../routes/url";
@@ -50,6 +50,8 @@ const ChangePassword = () => {
           adminUsername: data.admin_username,
         })
       );
+    } else {
+      dispatch(clearMustChange());
     }
 
     navigate("/admin/dashboard", { replace: true });
