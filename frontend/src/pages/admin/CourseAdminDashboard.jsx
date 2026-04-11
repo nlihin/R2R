@@ -14,6 +14,8 @@ import {
   fetchQuestions,
   saveQuestions,
   downloadData,
+  downloadGroupsTemplate,
+  importGroupsCSV,
 } from "../../store/admin/admin-Actions";
 
 const normalizeClassCodes = (list) => {
@@ -60,6 +62,9 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
   const classCodeRef = useRef(classCode);
   classCodeRef.current = classCode;
   const newRowSeq = useRef(0);
+  const csvFileInputRef = useRef(null);
+  const [csvBusy, setCsvBusy] = useState(false);
+  const [csvSuccess, setCsvSuccess] = useState("");
 
   const load = useCallback(async (opts = {}) => {
     const silent = Boolean(opts.silent);
@@ -68,6 +73,7 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
     if (!silent) {
       setLoading(true);
       setError("");
+      setCsvSuccess("");
     }
     try {
       const data = await dispatch(fetchGroups(token, requestedClass));
@@ -82,6 +88,7 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
     } catch (e) {
       if (classCodeRef.current === requestedClass) {
         setError(e.message || "Failed to load groups");
+        setCsvSuccess("");
       }
     } finally {
       if (!silent) {
@@ -111,8 +118,52 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
   const deleteRow = (idx) =>
     setRows((prev) => prev.filter((_, i) => i !== idx));
 
+  const downloadCsvTemplate = async () => {
+    if (!classCode || !token) return;
+    setCsvBusy(true);
+    setError("");
+    setCsvSuccess("");
+    try {
+      const res = await dispatch(
+        downloadGroupsTemplate(token, classCode)
+      );
+      const blob = await res.blob();
+      const name = pickFilename(
+        res.headers.get("Content-Disposition"),
+        `groups_template_${classCode}.csv`
+      );
+      triggerBlobDownload(blob, name);
+    } catch (e) {
+      setError(e.message || "Failed to download CSV template");
+    } finally {
+      setCsvBusy(false);
+    }
+  };
+
+  const handleCsvFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !classCode || !token) return;
+    setCsvBusy(true);
+    setError("");
+    setCsvSuccess("");
+    try {
+      const data = await dispatch(
+        importGroupsCSV(token, classCode, file)
+      );
+      setCsvSuccess(data.msg || "Import completed.");
+      await load({ silent: true });
+      if (typeof onSaveSuccess === "function") onSaveSuccess();
+    } catch (err) {
+      setError(err.message || "Failed to import CSV");
+    } finally {
+      setCsvBusy(false);
+    }
+  };
+
   const save = async () => {
     setError("");
+    setCsvSuccess("");
     const groups = rows.map((r) => {
       const num =
         r.number === "" || r.number == null ? null : Number(r.number);
@@ -154,6 +205,11 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
             {error}
           </p>
         </div>
+      ) : null}
+      {csvSuccess ? (
+        <p className="admin-inline-msg admin-inline-msg--success" role="status">
+          {csvSuccess}
+        </p>
       ) : null}
       {loading ? (
         <p className="admin-inline-msg admin-inline-msg--muted">Loading groups…</p>
@@ -221,6 +277,30 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
             {savedAt ? (
               <span className="saved-timestamp">✓ Saved at {savedAt}</span>
             ) : null}
+          </div>
+          <div className="admin-download-toolbar">
+            <PrimaryButton
+              type="button"
+              disabled={csvBusy || loading}
+              onClick={downloadCsvTemplate}
+            >
+              Download CSV template
+            </PrimaryButton>
+            <input
+              ref={csvFileInputRef}
+              type="file"
+              accept=".csv"
+              style={{ display: "none" }}
+              aria-label="Choose CSV file to import"
+              onChange={handleCsvFileSelected}
+            />
+            <PrimaryButton
+              type="button"
+              disabled={csvBusy || loading}
+              onClick={() => csvFileInputRef.current?.click()}
+            >
+              Import CSV
+            </PrimaryButton>
           </div>
         </>
       )}
