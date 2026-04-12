@@ -36,6 +36,7 @@ class Group(db.Model):
 class Class_codes(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     class_code = db.Column(db.String(length=1024), nullable=False, unique=True)
+    bts_enabled = db.Column(db.Boolean(), nullable=False, default=True)
 
 class Question(db.Model):
     id = db.Column(db.Integer(), primary_key=True)

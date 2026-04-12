@@ -9,6 +9,8 @@ import {
 import AdminStatusBanner from "./AdminStatusBanner";
 import {
   fetchMyClasses,
+  fetchClassSettings,
+  saveClassSettings,
   fetchGroups,
   saveGroups,
   fetchQuestions,
@@ -544,6 +546,110 @@ const AnalysisPlaceholder = () => (
   </div>
 );
 
+const ClassBtsSettings = ({
+  classCode,
+  token,
+  dispatch,
+  onSaveSuccess,
+}) => {
+  const [btsEnabled, setBtsEnabled] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [savedAt, setSavedAt] = useState("");
+  const classCodeRef = useRef(classCode);
+  classCodeRef.current = classCode;
+
+  const loadSettings = useCallback(async () => {
+    if (!classCode || !token) return;
+    setLoading(true);
+    setError("");
+    setSavedAt("");
+    try {
+      const data = await dispatch(fetchClassSettings(token, classCode));
+      if (classCodeRef.current !== classCode) return;
+      setBtsEnabled(Boolean(data.bts_enabled));
+    } catch (e) {
+      if (classCodeRef.current === classCode) {
+        setError(e.message || "Failed to load class settings");
+      }
+    } finally {
+      if (classCodeRef.current === classCode) {
+        setLoading(false);
+      }
+    }
+  }, [classCode, token, dispatch]);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  const save = async () => {
+    setError("");
+    setSaving(true);
+    try {
+      await dispatch(saveClassSettings(token, classCode, btsEnabled));
+      setSavedAt(
+        new Date().toLocaleString(undefined, {
+          hour: "2-digit",
+          minute: "2-digit",
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      );
+      if (typeof onSaveSuccess === "function") onSaveSuccess();
+    } catch (e) {
+      setError(e.message || "Failed to save class settings");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="admin-section">
+      <h3>Class Settings</h3>
+      {error ? (
+        <div className="admin-message-area">
+          <p className="admin-inline-msg admin-inline-msg--error" role="alert">
+            {error}
+          </p>
+        </div>
+      ) : null}
+      {loading ? (
+        <p className="admin-inline-msg admin-inline-msg--muted">
+          Loading settings…
+        </p>
+      ) : (
+        <>
+          <div className="admin-download-options">
+            <label>
+              <input
+                type="checkbox"
+                checked={btsEnabled}
+                onChange={(e) => setBtsEnabled(e.target.checked)}
+              />
+              Show BTS question (&quot;How do you think others will evaluate?&quot;)
+            </label>
+          </div>
+          <div className="admin-download-toolbar">
+            <PrimaryButton
+              type="button"
+              onClick={save}
+              disabled={saving}
+            >
+              {saving ? "Saving…" : "Save"}
+            </PrimaryButton>
+            {savedAt ? (
+              <span className="saved-timestamp">✓ Saved at {savedAt}</span>
+            ) : null}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 const CourseAdminDashboard = () => {
   const adminState = useSelector((s) => s.admin || {});
   const token =
@@ -660,6 +766,13 @@ const CourseAdminDashboard = () => {
           />
           <QuestionsTable
             key={`questions-${selectedClass}`}
+            classCode={selectedClass}
+            token={token}
+            dispatch={dispatch}
+            onSaveSuccess={notifySaveSuccess}
+          />
+          <ClassBtsSettings
+            key={`settings-${selectedClass}`}
             classCode={selectedClass}
             token={token}
             dispatch={dispatch}

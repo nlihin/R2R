@@ -6,6 +6,7 @@ from flask_jwt_extended import current_user, jwt_required
 
 from app import db
 from app.models import (
+    Class_codes,
     Group,
     Question,
     CrowdRating,
@@ -52,9 +53,16 @@ def get_groups():
             for q in Question.query.filter_by(class_code='').all()
         }
 
+    cc_row = Class_codes.query.filter_by(class_code=class_code).first()
+    bts_enabled = bool(cc_row.bts_enabled) if cc_row else True
+
     return jsonify(
         status=200,
-        data={"group_name": group.name, "questions": questions},
+        data={
+            "group_name": group.name,
+            "questions": questions,
+            "bts_enabled": bts_enabled,
+        },
     )
 
 
@@ -76,8 +84,17 @@ def rate_page():
         class_code = current_user.class_code
         username = str(current_user.username)
 
+        cc_row = Class_codes.query.filter_by(class_code=class_code).first()
+        bts_enabled = bool(cc_row.bts_enabled) if cc_row else True
+
         if group_number is None or rating is None:
             return jsonify(status=400, msg="Missing required fields"), 400
+
+        if bts_enabled and not crowd_ratings:
+            return jsonify(
+                status=400,
+                msg="BTS question is required for this class",
+            ), 400
 
         # Validate crowd_ratings sum = 100
         if crowd_ratings:

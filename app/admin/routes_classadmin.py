@@ -61,6 +61,41 @@ def _check_class_access(admin_id: str, class_code: str, role: str) -> bool:
     )
 
 
+@admin_bp.route(
+    "/classes/<class_code>/settings",
+    methods=["GET", "POST", "OPTIONS"],
+)
+@require_classadmin
+def class_settings(identity, class_code):
+    if request.method == "OPTIONS":
+        return jsonify(status=200), 200
+
+    admin_id = identity["admin_id"]
+    role = identity["role"]
+
+    if not _check_class_access(admin_id, class_code, role):
+        return jsonify(msg="Forbidden"), 403
+
+    row = Class_codes.query.filter_by(class_code=class_code).first()
+    if not row:
+        return jsonify(msg="Class not found"), 404
+
+    if request.method == "GET":
+        return jsonify(bts_enabled=bool(row.bts_enabled)), 200
+
+    body = request.get_json(silent=True) or {}
+    if "bts_enabled" not in body:
+        return jsonify(msg="Missing bts_enabled"), 400
+
+    val = body["bts_enabled"]
+    if not isinstance(val, bool):
+        return jsonify(msg="bts_enabled must be a boolean"), 400
+
+    row.bts_enabled = val
+    db.session.commit()
+
+    return jsonify(msg="Saved", bts_enabled=bool(row.bts_enabled)), 200
+
 
 @admin_bp.route("/my-classes", methods=["GET", "OPTIONS"])
 @require_classadmin

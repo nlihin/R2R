@@ -81,6 +81,37 @@ export const fetchMyClasses = (token) => async () => {
   return data.data || [];
 };
 
+export const fetchClassSettings = (token, classCode) => async () => {
+  const res = await fetch(
+    `${BaseURL}admin/classes/${classCode}/settings`,
+    {
+      method: "GET",
+      headers: jsonHeaders(token),
+    }
+  );
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.msg || "Failed to load class settings");
+  }
+  return data;
+};
+
+export const saveClassSettings = (token, classCode, btsEnabled) => async () => {
+  const res = await fetch(
+    `${BaseURL}admin/classes/${classCode}/settings`,
+    {
+      method: "POST",
+      headers: jsonHeaders(token),
+      body: JSON.stringify({ bts_enabled: Boolean(btsEnabled) }),
+    }
+  );
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.msg || "Failed to save class settings");
+  }
+  return data;
+};
+
 export const fetchAdmins = (token) => async () => {
   const res = await fetch(`${BaseURL}admin/admins`, {
     method: "GET",
