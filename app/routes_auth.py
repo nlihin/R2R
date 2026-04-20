@@ -18,12 +18,23 @@ def handle_register_options():
 @auth.route('/register', methods=['POST'])
 @cross_origin()
 def register():
-    privacy_consent = request.json.get('privacy_consent', False)
+    payload = request.json or {}
+    username = payload.get('username')
+    username = str(username).strip() if username is not None else None
+    if username is not None:
+        existing = User.query.filter_by(username=username).first()
+        if existing:
+            return jsonify(
+                status=400,
+                msg='This user is already registered.',
+            ), 400
+
+    privacy_consent = payload.get('privacy_consent', False)
     new_user = User(
-        username=request.json.get('username'),
-        name=request.json.get('name'),
-        email_address=request.json.get('email_address'),
-        password=request.json.get('password'),
+        username=username,
+        name=payload.get('name'),
+        email_address=payload.get('email_address'),
+        password=payload.get('password'),
         confirm=privacy_consent
     )
     if new_user.validate_username() and new_user.validate_password():

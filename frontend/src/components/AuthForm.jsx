@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Form,
   Link,
@@ -17,12 +17,22 @@ function AuthForm({ modalText, modalToggle }) {
   const [iD, setID] = useState();
   const [reID, setReID] = useState();
   const [classCode, setClassCode] = useState();
-  const [privacyConsent, setPrivacyConsent] = useState(false);
+  const [privacyConsent, setPrivacyConsent] = useState(true);
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
   
   let mode = searchParams.get("mode") || "login";
   const isLogin = mode === "login";
   const isSubmitting = navigation.state === "submitting";
+
+  useEffect(() => {
+    if (!data || typeof data !== "object" || !data.msg) return;
+    modalText(data.msg);
+    modalToggle(true);
+  }, [data, modalText, modalToggle]);
+
+  useEffect(() => {
+    modalToggle(false);
+  }, [mode, modalToggle]);
 
   const chackingID = (e) => {
     if (e.target.id === "username") {
@@ -36,27 +46,22 @@ function AuthForm({ modalText, modalToggle }) {
     setClassCode(e.target.value);
   };
 
-  const submitChecks = () => {
-    //for debugging
-    console.log("API Response Data:", data);
-
+  const handleFormSubmit = (e) => {
+    modalToggle(false);
     if (!isLogin) {
       if (reID !== iD) {
+        e.preventDefault();
         modalText("your IDs don't match, please retry.");
         modalToggle(true);
         return;
-      } else if (!reID || reID.length !== 9) {
+      }
+      const idStr = reID != null ? String(reID) : "";
+      if (!idStr || idStr.length !== 9) {
+        e.preventDefault();
         modalText("your ID has to contain 9 digits, please retry.");
         modalToggle(true);
         return;
       }
-    }
-
-    if (data && data.msg) {
-      modalText(data.msg);
-      modalToggle(true);
-    } else {
-      modalToggle(false);
     }
   };
   return (
@@ -65,9 +70,8 @@ function AuthForm({ modalText, modalToggle }) {
         isOpen={privacyModalOpen} 
         onClose={() => setPrivacyModalOpen(false)} 
       />
-      <Form method="post" className={classes.form}>
+      <Form method="post" className={classes.form} onSubmit={handleFormSubmit}>
         <h1>{isLogin ? "Log in" : "Register"}</h1>
-        {data && data.msg && modalText(data.msg) && modalToggle(true)}
         <p>
           <input
             id="username"
@@ -197,7 +201,7 @@ function AuthForm({ modalText, modalToggle }) {
         >
           <button
             disabled={isSubmitting}
-            onClick={submitChecks}
+            type="submit"
             style={{
               minWidth: "245px",
               textAlign: "center",
