@@ -34,7 +34,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'asdfla234509sdflsdf235'
 app.config["JWT_SECRET_KEY"] = os.environ.get('JWT_SECRET_KEY', 'super-secret')
 app.config['DEBUG'] = True
 app.config['CORS_HEADERS'] = 'Content-Type'
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(seconds=14400)
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(seconds=18000)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = datetime.timedelta(seconds=3600)
 
 db = SQLAlchemy(app)
