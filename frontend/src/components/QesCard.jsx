@@ -13,6 +13,7 @@ const QesCard = ({
   question,
   rankHandler,
   otherRatings,
+  btsBlockVisible = true,
 }) => {
   const [userRating, setUserRatings] = useState();
   const [feedback1, setUserfeedback] = useState('');
@@ -154,7 +155,7 @@ const QesCard = ({
           )}
         </UserRatingsWarrper>
       )}
-      {otherRatings && (
+      {otherRatings && btsBlockVisible && (
         <div className={classes.crowdRating}>
           <UserEvaluationTitle>{question}</UserEvaluationTitle>
           <div>

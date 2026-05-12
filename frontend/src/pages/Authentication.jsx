@@ -100,7 +100,11 @@ export const action = async ({ request }) => {
     res.status === 400 ||
     res.status === 500
   ) {
-    return res;
+    try {
+      return await res.json();
+    } catch {
+      return { status: res.status, msg: "Request failed" };
+    }
   }
   if (!res.ok) {
     throw json({ message: "Could not authenticate user." }, { status: 500 });

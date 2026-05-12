@@ -33,6 +33,7 @@ const GroupRatings = () => {
   // const [questions, setQuestions] = useState(["hey", "roi", "yoni"]);
   const [modalToggle, setModalToggle] = useState(false);
   const [modalText, setModalText] = useState();
+  const [btsEnabled, setBtsEnabled] = useState(true);
 
   // const titles = ["גרוע", "לא טוב", "בינוני", "טוב", "מצוין"];
 
@@ -94,7 +95,11 @@ const GroupRatings = () => {
         );
       }
       groupResData = await groupRes.json();
-      setGroupData(groupResData.data);
+      const d = groupResData.data;
+      setGroupData(d);
+      setBtsEnabled(
+        d && typeof d.bts_enabled === "boolean" ? d.bts_enabled : true
+      );
     };
     getGroupData();
   }, [params.groupId, params.classCode]);
@@ -132,15 +137,26 @@ const GroupRatings = () => {
 
 
   const validateGroupRating = () => {
+    if (!btsEnabled) {
+      return true;
+    }
     if (!crowdRatingsData) {
-      return true; 
+      setModalToggle(true);
+      setModalText(
+        "Please complete the BTS question (percentages must sum to 100)."
+      );
+      return false;
     }
     const totalRating = Object.values(crowdRatingsData).reduce(
       (acc, curr) => acc + curr,
       0
     );
     if (totalRating === 0) {
-      return true;
+      setModalToggle(true);
+      setModalText(
+        "Please complete the BTS question (percentages must sum to 100)."
+      );
+      return false;
     }
     if (totalRating === 100) return true;
     else if (totalRating > 100) {
@@ -176,7 +192,7 @@ const GroupRatings = () => {
         group_number: parseInt(params.groupId),
         rate: groupRatingsData,
         feedback12: feedback1,
-        crowd_ratings: crowdRatingsData,
+        crowd_ratings: btsEnabled ? crowdRatingsData : {},
         answer: otherQuestionsData,
       },
     };
@@ -257,6 +273,7 @@ const GroupRatings = () => {
             question={"How do you think others will evaluate?"}
             rankHandler={groupDataHandler}
             otherRatings={true}
+            btsBlockVisible={btsEnabled}
           />
           {groupData?.questions &&
             Object.keys(groupData?.questions).map((questionNum) => {

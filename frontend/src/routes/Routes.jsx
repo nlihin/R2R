@@ -8,6 +8,15 @@ import { action as logoutAction } from "../pages/Logout";
 import { tokenLoader, checkAuthLoader } from "../utlis/auth";
 import GroupRatings from "../pages/GroupRatings";
 
+
+// admin pages add 03/2026:
+
+
+import AdminLogin from "../pages/admin/AdminLogin";
+import AdminDashboard from "../pages/admin/AdminDashboard";
+import ChangePassword from "../pages/admin/ChangePassword";
+
+
 const router = createHashRouter([
   {
     path: "/",
@@ -26,13 +35,19 @@ const router = createHashRouter([
   { path: "test", element: <Home />, loader: checkAuthLoader },
   { path: "auth", element: <Authentication />, action: authAction },
   { path: "logout", action: logoutAction },
+
+
+  // admin pages add 03/2026:
+  
+  { path: "admin/login", element: <AdminLogin /> },
+  { path: "admin/dashboard", element: <AdminDashboard /> },
+  { path: "admin/change-password", element: <ChangePassword /> },
 ]);
+
 
 const Routes = () => {
   return <RouterProvider router={router} />;
 };
 
+
 export default Routes;
-
-
-
