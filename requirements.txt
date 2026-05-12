@@ -39,7 +39,8 @@ SQLAlchemy==2.0.11
 tomli==2.0.1
 #changed 23.1.2026
 #typing_extensions==4.5.0
-typing_extensions==4.5.0
+#typing_extensions==4.5.0
+typing_extensions>=4.12.2
 tzdata==2025.3
 Werkzeug==2.3.2
 zipp==3.15.0
