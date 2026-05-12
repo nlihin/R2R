@@ -13,7 +13,8 @@ Flask-JWT-Extended==4.4.4
 Flask-SQLAlchemy==3.0.3
 #changed 23.1.2026
 #greenlet==2.0.2
-greenlet==2.0.2
+#greenlet==2.0.2
+greenlet>=3.0.3
 gunicorn==20.1.0
 importlib-metadata==6.6.0
 iniconfig==2.0.0
