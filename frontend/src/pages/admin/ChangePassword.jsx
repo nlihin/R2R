@@ -6,6 +6,8 @@ import { AdminWrapper, AdminCard, PrimaryButton, ErrorMsg } from "./AdminStyles"
 import PasswordField from "./PasswordField";
 import { BaseURL } from "../../routes/url";
 
+const MISMATCH_MSG = "New password and confirmation do not match.";
+
 const ChangePassword = () => {
   const adminState = useSelector((s) => s.admin || {});
   const token =
@@ -13,6 +15,7 @@ const ChangePassword = () => {
 
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
+  const [confirmNext, setConfirmNext] = useState("");
   const [error, setError] = useState("");
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -23,9 +26,23 @@ const ChangePassword = () => {
     }
   }, [token, navigate]);
 
+  const clearMismatchError = () => {
+    if (error === MISMATCH_MSG) setError("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (!confirmNext) {
+      setError("Please confirm your new password.");
+      return;
+    }
+    if (next !== confirmNext) {
+      setError(MISMATCH_MSG);
+      return;
+    }
+
     const res = await fetch(`${BaseURL}admin/change-password`, {
       method: "POST",
       headers: {
@@ -67,7 +84,10 @@ const ChangePassword = () => {
         <h1>Change Password</h1>
         <p style={{ fontSize: 13, color: "var(--color-gray-400)", textAlign: "center" }}>
           You must change your password before proceeding.
-          <br />Min 12 chars, uppercase, lowercase, digit.
+          <br />
+          Min 12 chars, uppercase, lowercase, digit.
+          <br />
+          Please enter the new password twice.
         </p>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <PasswordField
@@ -80,7 +100,20 @@ const ChangePassword = () => {
           <PasswordField
             placeholder="New password (12+ chars)"
             value={next}
-            onChange={(e) => setNext(e.target.value)}
+            onChange={(e) => {
+              setNext(e.target.value);
+              clearMismatchError();
+            }}
+            required
+            autoComplete="new-password"
+          />
+          <PasswordField
+            placeholder="Confirm new password"
+            value={confirmNext}
+            onChange={(e) => {
+              setConfirmNext(e.target.value);
+              clearMismatchError();
+            }}
             required
             autoComplete="new-password"
           />
