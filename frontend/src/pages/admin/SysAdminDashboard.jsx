@@ -10,6 +10,7 @@ import {
   createAdmin,
   updateAdmin,
   resetAdminPassword,
+  deleteAdmin,
   fetchAdminClassesAssignments,
   assignClassToAdmin,
   removeClassAssignment,
@@ -17,11 +18,16 @@ import {
 } from "../../store/admin/admin-Actions";
 import { isValidAdminEmail } from "./adminValidation";
 import AdminStatusBanner from "./AdminStatusBanner";
+import DeleteAdminConfirmModal from "./DeleteAdminConfirmModal";
+
+const PROTECTED_ADMIN_ID = "000000001";
 
 const SysAdminDashboard = () => {
   const adminState = useSelector((s) => s.admin || {});
   const token =
     adminState.token || localStorage.getItem("adminToken") || null;
+  const currentAdminId =
+    adminState.adminId || localStorage.getItem("adminId") || "";
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -42,6 +48,8 @@ const SysAdminDashboard = () => {
   const [successBanner, setSuccessBanner] = useState("");
   const [addFormEmailError, setAddFormEmailError] = useState("");
   const [rowEmailSaveError, setRowEmailSaveError] = useState(null);
+  const [adminToDelete, setAdminToDelete] = useState(null);
+  const [deletingAdmin, setDeletingAdmin] = useState(false);
 
   useEffect(() => {
     if (!successBanner) return undefined;
@@ -258,6 +266,51 @@ const SysAdminDashboard = () => {
     }
   };
 
+  const canDeleteAdmin = (adminId) =>
+    adminId !== PROTECTED_ADMIN_ID && adminId !== currentAdminId;
+
+  const canResetPassword = (adminId) =>
+    adminId !== PROTECTED_ADMIN_ID || currentAdminId === PROTECTED_ADMIN_ID;
+
+  const openDeleteModal = (admin) => {
+    setError("");
+    setSuccessBanner("");
+    const edited = editAdmins[admin.admin_id] || {};
+    setAdminToDelete({
+      admin_id: admin.admin_id,
+      admin_username: edited.admin_username ?? admin.admin_username,
+      admin_email: edited.admin_email ?? admin.admin_email,
+      role: edited.role ?? admin.role,
+    });
+  };
+
+  const handleConfirmDeleteAdmin = async () => {
+    if (!adminToDelete) return;
+    setError("");
+    setSuccessBanner("");
+    setDeletingAdmin(true);
+    try {
+      await dispatch(deleteAdmin(token, adminToDelete.admin_id));
+      const deletedId = adminToDelete.admin_id;
+      setAdmins((prev) => prev.filter((a) => a.admin_id !== deletedId));
+      setEditAdmins((prev) => {
+        const next = { ...prev };
+        delete next[deletedId];
+        return next;
+      });
+      setAssigns((prev) => prev.filter((r) => r.admin_id !== deletedId));
+      if (newAssignAdminId === deletedId) {
+        setNewAssignAdminId("");
+      }
+      setAdminToDelete(null);
+      setSuccessBanner("Admin deleted successfully.");
+    } catch (e) {
+      setError(e.message || "Failed to delete admin");
+    } finally {
+      setDeletingAdmin(false);
+    }
+  };
+
   const deleteAssignRemote = async (admin_id, class_code) => {
     setError("");
     setAddFormEmailError("");
@@ -355,6 +408,8 @@ const SysAdminDashboard = () => {
             <tbody>
               {admins.map((a) => {
                 const e = editAdmins[a.admin_id] || {};
+                const showDeleteAction = canDeleteAdmin(a.admin_id);
+                const showResetPasswordAction = canResetPassword(a.admin_id);
                 const emailRowErr =
                   rowEmailSaveError &&
                   rowEmailSaveError.adminId === a.admin_id;
@@ -443,14 +498,24 @@ const SysAdminDashboard = () => {
                         >
                           Save
                         </PrimaryButton>
-                        <PrimaryButton
-                          type="button"
-                          onClick={() =>
-                            handleResetPassword(a.admin_id)
-                          }
-                        >
-                          Reset password
-                        </PrimaryButton>
+                        {showResetPasswordAction ? (
+                          <PrimaryButton
+                            type="button"
+                            onClick={() =>
+                              handleResetPassword(a.admin_id)
+                            }
+                          >
+                            Reset password
+                          </PrimaryButton>
+                        ) : null}
+                        {showDeleteAction ? (
+                          <DangerButton
+                            type="button"
+                            onClick={() => openDeleteModal(a)}
+                          >
+                            Delete
+                          </DangerButton>
+                        ) : null}
                       </span>
                     </td>
                   </tr>
@@ -537,6 +602,14 @@ const SysAdminDashboard = () => {
           </div>
         )}
       </div>
+      <DeleteAdminConfirmModal
+        admin={adminToDelete}
+        confirming={deletingAdmin}
+        onCancel={() => {
+          if (!deletingAdmin) setAdminToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteAdmin}
+      />
     </>
   );
 };

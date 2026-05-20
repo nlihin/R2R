@@ -166,6 +166,18 @@ export const resetAdminPassword = (token, adminId) => async () => {
   return data;
 };
 
+export const deleteAdmin = (token, adminId) => async () => {
+  const res = await fetch(`${BaseURL}admin/admins/${adminId}`, {
+    method: "DELETE",
+    headers: jsonHeaders(token),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.msg || "Failed to delete admin");
+  }
+  return data;
+};
+
 export const fetchAdminClassesAssignments = (token) => async () => {
   const res = await fetch(`${BaseURL}admin/admin-classes`, {
     method: "GET",
