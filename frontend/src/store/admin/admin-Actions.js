@@ -230,6 +230,49 @@ export const fetchAvailableClasses = (token) => async () => {
   return data.data || [];
 };
 
+export const fetchClassCodes = (token) => async () => {
+  const res = await fetch(`${BaseURL}admin/classes`, {
+    method: "GET",
+    headers: jsonHeaders(token),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.msg || "Failed to load class codes");
+  }
+  return data.data || [];
+};
+
+export const createClassCode = (token, payload) => async () => {
+  const res = await fetch(`${BaseURL}admin/classes`, {
+    method: "POST",
+    headers: jsonHeaders(token),
+    body: JSON.stringify({
+      class_code: payload.class_code,
+      bts_enabled: payload.bts_enabled,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.msg || "Failed to create class code");
+  }
+  return data;
+};
+
+export const deleteClassCode = (token, classCode) => async () => {
+  const res = await fetch(
+    `${BaseURL}admin/classes/${encodeURIComponent(classCode)}`,
+    {
+      method: "DELETE",
+      headers: jsonHeaders(token),
+    }
+  );
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.msg || "Failed to delete class code");
+  }
+  return data;
+};
+
 export const fetchGroups = (token, classCode) => async () => {
   const res = await fetch(`${BaseURL}admin/classes/${classCode}/groups`, {
     method: "GET",

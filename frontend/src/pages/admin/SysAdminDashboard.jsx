@@ -19,6 +19,7 @@ import {
 import { isValidAdminEmail } from "./adminValidation";
 import AdminStatusBanner from "./AdminStatusBanner";
 import DeleteAdminConfirmModal from "./DeleteAdminConfirmModal";
+import SysAdminClassCodes from "./SysAdminClassCodes";
 
 const PROTECTED_ADMIN_ID = "000000001";
 
@@ -308,6 +309,15 @@ const SysAdminDashboard = () => {
       setError(e.message || "Failed to delete admin");
     } finally {
       setDeletingAdmin(false);
+    }
+  };
+
+  const reloadAvailableClasses = async () => {
+    try {
+      const classesData = await dispatch(fetchAvailableClasses(token));
+      setAvailableClasses(classesData);
+    } catch (e) {
+      setError(e.message || "Failed to refresh class list");
     }
   };
 
@@ -602,6 +612,12 @@ const SysAdminDashboard = () => {
           </div>
         )}
       </div>
+
+      <SysAdminClassCodes
+        token={token}
+        onClassesChanged={reloadAvailableClasses}
+      />
+
       <DeleteAdminConfirmModal
         admin={adminToDelete}
         confirming={deletingAdmin}

@@ -1,16 +1,27 @@
+import re
+
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from functools import wraps
-from sqlalchemy import cast, func, Integer
+from sqlalchemy import cast, func, Integer, inspect, text
 from sqlalchemy.exc import DataError, IntegrityError, SQLAlchemyError
 
 from app import db
 from app.admin import admin_bp
 from app.admin.models_admin import AdminUser, AdminClass
 from app.admin.auth_admin import hash_password, generate_temp_password
-from app.models import Class_codes
+from app.models import (
+    Class_codes,
+    Group,
+    Question,
+    Participant,
+    Pairwise,
+    RankNewItem,
+)
 
 PROTECTED_ADMIN_ID = '000000001'
+CLASS_CODE_MAX_LENGTH = 10
+CLASS_CODE_PATTERN = re.compile(r'^\d+$')
 
 
 def require_sysadmin(f):
@@ -381,6 +392,137 @@ def remove_class_assignment(admin_id, class_code):
         return jsonify(msg='Database error while removing assignment.'), 500
 
     return jsonify(msg='Removed', admin_id=admin_id, class_code=class_code), 200
+
+
+def _normalize_class_code(raw):
+    return str(raw or '').strip()
+
+
+def _validate_class_code(class_code):
+    if not class_code:
+        return 'class_code is required'
+    if len(class_code) > CLASS_CODE_MAX_LENGTH:
+        return (
+            f'class_code must be at most {CLASS_CODE_MAX_LENGTH} characters'
+        )
+    if not CLASS_CODE_PATTERN.match(class_code):
+        return 'class_code must contain digits only (no spaces or letters)'
+    return None
+
+
+def _legacy_crowd_rating_uses_class_code(class_code):
+    try:
+        inspector = inspect(db.engine)
+        if 'crowd_rating' not in inspector.get_table_names():
+            return False
+        column_names = {
+            col['name'] for col in inspector.get_columns('crowd_rating')
+        }
+        if 'class_code' not in column_names:
+            return False
+        row = db.session.execute(
+            text(
+                'SELECT 1 FROM crowd_rating WHERE class_code = :class_code '
+                'LIMIT 1'
+            ),
+            {'class_code': class_code},
+        ).first()
+        return row is not None
+    except SQLAlchemyError:
+        raise
+
+
+def _class_code_delete_block(class_code):
+    if AdminClass.query.filter_by(class_code=class_code).first():
+        return 'Cannot delete class code because it is assigned to admins.'
+    if Group.query.filter_by(class_code=class_code).first():
+        return 'Cannot delete class code because it is already used in groups.'
+    if Question.query.filter_by(class_code=class_code).first():
+        return 'Cannot delete class code because it is already used in questions.'
+    if Participant.query.filter_by(class_code=class_code).first():
+        return 'Cannot delete class code because it is already used in participants.'
+    if Pairwise.query.filter_by(class_code=class_code).first():
+        return 'Cannot delete class code because it is already used in pairwise data.'
+    if RankNewItem.query.filter_by(class_code=class_code).first():
+        return 'Cannot delete class code because it is already used in rankings.'
+    if _legacy_crowd_rating_uses_class_code(class_code):
+        return (
+            'Cannot delete class code because it is already used in legacy '
+            'crowd rating data.'
+        )
+    return None
+
+
+@admin_bp.route('/classes', methods=['GET', 'POST', 'OPTIONS'])
+@require_sysadmin
+def manage_class_codes():
+    if request.method == 'GET':
+        rows = Class_codes.query.order_by(Class_codes.class_code).all()
+        return jsonify(data=[{
+            'class_code': row.class_code,
+            'bts_enabled': row.bts_enabled,
+        } for row in rows]), 200
+
+    d = request.get_json(silent=True) or {}
+    class_code = _normalize_class_code(d.get('class_code'))
+
+    class_code_err = _validate_class_code(class_code)
+    if class_code_err:
+        return jsonify(msg=class_code_err), 400
+
+    if Class_codes.query.filter_by(class_code=class_code).first():
+        return jsonify(msg='Class code already exists'), 409
+
+    if 'bts_enabled' in d:
+        bts_enabled, bool_err = _normalize_bool(d.get('bts_enabled'))
+        if bool_err:
+            return jsonify(msg='Invalid bts_enabled value'), 400
+    else:
+        bts_enabled = True
+
+    row = Class_codes(class_code=class_code, bts_enabled=bts_enabled)
+    db.session.add(row)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(msg='Class code already exists'), 409
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify(msg='Database error while creating class code.'), 500
+
+    return jsonify(class_code=class_code, bts_enabled=bts_enabled), 201
+
+
+@admin_bp.route('/classes/<class_code>', methods=['DELETE', 'OPTIONS'])
+@require_sysadmin
+def delete_class_code(class_code):
+    row = Class_codes.query.filter_by(class_code=class_code).first()
+    if not row:
+        return jsonify(msg='Not found'), 404
+
+    try:
+        block_msg = _class_code_delete_block(class_code)
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify(
+            msg='Database error while checking class code dependencies.',
+        ), 500
+
+    if block_msg:
+        return jsonify(msg=block_msg), 409
+
+    db.session.delete(row)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(msg='Cannot delete class code due to related data.'), 409
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify(msg='Database error while deleting class code.'), 500
+
+    return jsonify(msg='Deleted', class_code=class_code), 200
 
 
 @admin_bp.route('/available-classes', methods=['GET', 'OPTIONS'])
