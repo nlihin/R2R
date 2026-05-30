@@ -360,51 +360,66 @@ def download_data(identity, class_code):
     if not _check_class_access(admin_id, class_code, role):
         return jsonify(msg="Forbidden"), 403
 
+    valid_datasets = {
+        "crowd_rating",
+        "pairwise",
+        "question_answer",
+        "rank_new_items",
+    }
     datasets = request.json.get("datasets", [])
-    valid = {"rate", "user", "question_answer"}
-    datasets = [d for d in datasets if d in valid]
+    datasets = [d for d in datasets if d in valid_datasets]
     if not datasets:
         return jsonify(msg="Select at least one dataset"), 400
 
+    params = {"cc": class_code}
     files = {}
 
-    if "rate" in datasets:
-        df = pd.read_sql(
-            "SELECT * FROM rate WHERE class_code = %(cc)s",
-            db.engine,
-            params={"cc": class_code},
-        )
-        files["rate.csv"] = df.to_csv(index=False).encode("utf-8")
-
-    if "user" in datasets:
-        df = pd.read_sql(
-            'SELECT u.id, u.username, u.name, u.email_address '
-            'FROM "user" u '
-            "JOIN participants p ON p.username = u.username "
-            "WHERE p.class_code = %(cc)s",
-            db.engine,
-            params={"cc": class_code},
-        )
-        files["user.csv"] = df.to_csv(index=False).encode("utf-8")
+    df_participants = pd.read_sql(
+        "SELECT * FROM participants WHERE class_code = %(cc)s",
+        db.engine,
+        params=params,
+    )
+    files["participants.csv"] = df_participants.to_csv(index=False).encode("utf-8")
 
     if "question_answer" in datasets:
         df = pd.read_sql(
             "SELECT qa.* FROM question_answer qa "
-            "JOIN participants p ON p.participant_id = qa.participant_id "
+            "INNER JOIN participants p ON p.participant_id = qa.participant_id "
             "WHERE p.class_code = %(cc)s",
             db.engine,
-            params={"cc": class_code},
+            params=params,
         )
         files["question_answer.csv"] = df.to_csv(index=False).encode("utf-8")
 
-    if len(files) == 1:
-        name, content = next(iter(files.items()))
-        return send_file(
-            io.BytesIO(content),
-            mimetype="text/csv",
-            as_attachment=True,
-            download_name=name,
+    if "crowd_rating" in datasets:
+        df = pd.read_sql(
+            "SELECT cr.* FROM crowd_rating cr "
+            "INNER JOIN participants p ON p.participant_id = cr.participant_id "
+            "WHERE p.class_code = %(cc)s",
+            db.engine,
+            params=params,
         )
+        files["crowd_rating.csv"] = df.to_csv(index=False).encode("utf-8")
+
+    if "rank_new_items" in datasets:
+        df = pd.read_sql(
+            "SELECT rni.* FROM rank_new_items rni "
+            "INNER JOIN participants p ON p.participant_id = rni.participant_id "
+            "WHERE p.class_code = %(cc)s",
+            db.engine,
+            params=params,
+        )
+        files["rank_new_items.csv"] = df.to_csv(index=False).encode("utf-8")
+
+    if "pairwise" in datasets:
+        df = pd.read_sql(
+            "SELECT pw.* FROM pairwise pw "
+            "INNER JOIN participants p ON p.participant_id = pw.participant_id "
+            "WHERE p.class_code = %(cc)s AND pw.class_code = %(cc)s",
+            db.engine,
+            params=params,
+        )
+        files["pairwise.csv"] = df.to_csv(index=False).encode("utf-8")
 
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:

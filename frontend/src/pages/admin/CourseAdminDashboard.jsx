@@ -456,12 +456,12 @@ const QuestionsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
 };
 
 const Downloads = ({ classCode, token, dispatch }) => {
-  const [selected, setSelected] = useState(["rate"]);
+  const [selected, setSelected] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setSelected(["rate"]);
+    setSelected([]);
     setError("");
     setLoading(false);
   }, [classCode]);
@@ -473,7 +473,12 @@ const Downloads = ({ classCode, token, dispatch }) => {
         : [...prev, ds]
     );
 
-  const options = ["rate", "user", "question_answer"];
+  const options = [
+    "crowd_rating",
+    "pairwise",
+    "question_answer",
+    "rank_new_items",
+  ];
 
   const download = async () => {
     if (!selected.length || !classCode) return;
@@ -485,7 +490,7 @@ const Downloads = ({ classCode, token, dispatch }) => {
       const blob = await res.blob();
       const name = pickFilename(
         res.headers.get("Content-Disposition"),
-        selected.length > 1 ? `r2r_data_${cc}.zip` : `${selected[0]}.csv`
+        `r2r_data_${cc}.zip`
       );
       triggerBlobDownload(blob, name);
     } catch (e) {
@@ -523,11 +528,7 @@ const Downloads = ({ classCode, token, dispatch }) => {
           onClick={download}
           disabled={!selected.length || loading}
         >
-          {loading
-            ? "Preparing..."
-            : selected.length > 1
-            ? "Download ZIP"
-            : "Download CSV"}
+          {loading ? "Preparing..." : "Download ZIP"}
         </PrimaryButton>
       </div>
     </div>
