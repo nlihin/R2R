@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useBlocker } from "react-router-dom";
 import {
   ClassSelector,
   PrimaryButton,
@@ -56,11 +56,24 @@ const triggerBlobDownload = (blob, filename) => {
   URL.revokeObjectURL(url);
 };
 
-const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
+const UNSAVED_LEAVE_MSG =
+  "You have unsaved changes. Leave without saving?";
+
+const UnsavedHint = () => (
+  <span
+    className="admin-inline-msg admin-inline-msg--muted admin-unsaved-hint"
+    role="status"
+  >
+    You have unsaved changes
+  </span>
+);
+
+const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess, onDirtyChange }) => {
   const [rows, setRows] = useState([]);
   const [savedAt, setSavedAt] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const classCodeRef = useRef(classCode);
   classCodeRef.current = classCode;
   const newRowSeq = useRef(0);
@@ -103,13 +116,25 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
     load();
   }, [load]);
 
+  const markDirty = () => {
+    setIsDirty(true);
+    if (typeof onDirtyChange === "function") onDirtyChange(true);
+  };
+
+  const markClean = () => {
+    setIsDirty(false);
+    if (typeof onDirtyChange === "function") onDirtyChange(false);
+  };
+
   const updateRow = (idx, field, value) => {
+    markDirty();
     setRows((prev) =>
       prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r))
     );
   };
 
   const addRow = () => {
+    markDirty();
     newRowSeq.current += 1;
     setRows((prev) => [
       ...prev,
@@ -117,8 +142,10 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
     ]);
   };
 
-  const deleteRow = (idx) =>
+  const deleteRow = (idx) => {
+    markDirty();
     setRows((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const downloadCsvTemplate = async () => {
     if (!classCode || !token) return;
@@ -155,6 +182,7 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
       );
       setCsvSuccess(data.msg || "Import completed.");
       await load({ silent: true });
+      markClean();
       if (typeof onSaveSuccess === "function") onSaveSuccess();
     } catch (err) {
       setError(err.message || "Failed to import CSV");
@@ -192,6 +220,7 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
       const out = await dispatch(saveGroups(token, classCode, groups));
       setSavedAt(out.saved_at || "");
       await load({ silent: true });
+      markClean();
       if (typeof onSaveSuccess === "function") onSaveSuccess();
     } catch (e) {
       setError(e.message || "Failed to save groups");
@@ -276,6 +305,7 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
             <PrimaryButton type="button" onClick={save}>
               Save
             </PrimaryButton>
+            {isDirty ? <UnsavedHint /> : null}
             {savedAt ? (
               <span className="saved-timestamp">✓ Saved at {savedAt}</span>
             ) : null}
@@ -310,11 +340,12 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
   );
 };
 
-const QuestionsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
+const QuestionsTable = ({ classCode, token, dispatch, onSaveSuccess, onDirtyChange }) => {
   const [rows, setRows] = useState([]);
   const [savedAt, setSavedAt] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
   const load = useCallback(async (opts = {}) => {
     const silent = Boolean(opts.silent);
@@ -345,7 +376,18 @@ const QuestionsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
     load();
   }, [load]);
 
+  const markDirty = () => {
+    setIsDirty(true);
+    if (typeof onDirtyChange === "function") onDirtyChange(true);
+  };
+
+  const markClean = () => {
+    setIsDirty(false);
+    if (typeof onDirtyChange === "function") onDirtyChange(false);
+  };
+
   const updateRow = (idx, value) => {
+    markDirty();
     setRows((prev) =>
       prev.map((r, i) =>
         i === idx ? { ...r, description: value } : r
@@ -353,11 +395,14 @@ const QuestionsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
     );
   };
 
-  const deleteRow = (idx) =>
+  const deleteRow = (idx) => {
+    markDirty();
     setRows((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const addRow = () => {
     if (rows.length >= 3) return;
+    markDirty();
     setRows((prev) => [...prev, { description: "" }]);
   };
 
@@ -380,6 +425,7 @@ const QuestionsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
       );
       setSavedAt(out.saved_at || "");
       await load({ silent: true });
+      markClean();
       if (typeof onSaveSuccess === "function") onSaveSuccess();
     } catch (e) {
       setError(e.message || "Failed to save questions");
@@ -445,6 +491,7 @@ const QuestionsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
             <PrimaryButton type="button" onClick={save}>
               Save
             </PrimaryButton>
+            {isDirty ? <UnsavedHint /> : null}
             {savedAt ? (
               <span className="saved-timestamp">✓ Saved at {savedAt}</span>
             ) : null}
@@ -552,12 +599,14 @@ const ClassBtsSettings = ({
   token,
   dispatch,
   onSaveSuccess,
+  onDirtyChange,
 }) => {
   const [btsEnabled, setBtsEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [savedAt, setSavedAt] = useState("");
+  const [isDirty, setIsDirty] = useState(false);
   const classCodeRef = useRef(classCode);
   classCodeRef.current = classCode;
 
@@ -585,6 +634,16 @@ const ClassBtsSettings = ({
     loadSettings();
   }, [loadSettings]);
 
+  const markDirty = () => {
+    setIsDirty(true);
+    if (typeof onDirtyChange === "function") onDirtyChange(true);
+  };
+
+  const markClean = () => {
+    setIsDirty(false);
+    if (typeof onDirtyChange === "function") onDirtyChange(false);
+  };
+
   const save = async () => {
     setError("");
     setSaving(true);
@@ -599,6 +658,7 @@ const ClassBtsSettings = ({
           year: "numeric",
         })
       );
+      markClean();
       if (typeof onSaveSuccess === "function") onSaveSuccess();
     } catch (e) {
       setError(e.message || "Failed to save class settings");
@@ -628,7 +688,10 @@ const ClassBtsSettings = ({
               <input
                 type="checkbox"
                 checked={btsEnabled}
-                onChange={(e) => setBtsEnabled(e.target.checked)}
+                onChange={(e) => {
+                  setBtsEnabled(e.target.checked);
+                  markDirty();
+                }}
               />
               Show BTS question (&quot;How do you think others will evaluate?&quot;)
             </label>
@@ -641,6 +704,7 @@ const ClassBtsSettings = ({
             >
               {saving ? "Saving…" : "Save"}
             </PrimaryButton>
+            {isDirty ? <UnsavedHint /> : null}
             {savedAt ? (
               <span className="saved-timestamp">✓ Saved at {savedAt}</span>
             ) : null}
@@ -651,7 +715,10 @@ const ClassBtsSettings = ({
   );
 };
 
-const CourseAdminDashboard = () => {
+const CourseAdminDashboard = ({
+  onUnsavedChangesChange,
+  suppressNavigationGuardRef,
+}) => {
   const adminState = useSelector((s) => s.admin || {});
   const token =
     adminState.token || localStorage.getItem("adminToken") || null;
@@ -663,6 +730,59 @@ const CourseAdminDashboard = () => {
   const [classesError, setClassesError] = useState("");
   const [loadingClasses, setLoadingClasses] = useState(false);
   const [pageSuccess, setPageSuccess] = useState("");
+  const [dirtySections, setDirtySections] = useState({
+    groups: false,
+    questions: false,
+    settings: false,
+  });
+
+  const hasUnsavedChanges =
+    dirtySections.groups || dirtySections.questions || dirtySections.settings;
+
+  const handleSectionDirty = (section) => (isDirty) => {
+    setDirtySections((prev) => ({ ...prev, [section]: isDirty }));
+  };
+
+  useEffect(() => {
+    if (typeof onUnsavedChangesChange === "function") {
+      onUnsavedChangesChange(hasUnsavedChanges);
+    }
+  }, [hasUnsavedChanges, onUnsavedChangesChange]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof onUnsavedChangesChange === "function") {
+        onUnsavedChangesChange(false);
+      }
+    };
+  }, [onUnsavedChangesChange]);
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnsavedChanges &&
+      !(suppressNavigationGuardRef?.current ?? false) &&
+      currentLocation.pathname !== nextLocation.pathname
+  );
+
+  useEffect(() => {
+    if (blocker.state !== "blocked") return;
+    const ok = window.confirm(UNSAVED_LEAVE_MSG);
+    if (ok) {
+      blocker.proceed();
+    } else {
+      blocker.reset();
+    }
+  }, [blocker]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return undefined;
+    const onBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = true;
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   useEffect(() => {
     if (!pageSuccess) return undefined;
@@ -712,7 +832,19 @@ const CourseAdminDashboard = () => {
 
   useEffect(() => {
     setPageSuccess("");
+    setDirtySections({ groups: false, questions: false, settings: false });
   }, [selectedClass]);
+
+  const handleClassChange = (nextClass) => {
+    if (nextClass === selectedClass) return;
+    if (
+      hasUnsavedChanges &&
+      !window.confirm(UNSAVED_LEAVE_MSG)
+    ) {
+      return;
+    }
+    setSelectedClass(nextClass);
+  };
 
   const notifySaveSuccess = () => {
     setPageSuccess("Changes saved successfully.");
@@ -744,7 +876,9 @@ const CourseAdminDashboard = () => {
           <div className="admin-class-picker">
             <ClassSelector
               value={selectedClass || ""}
-              onChange={(e) => setSelectedClass(e.target.value || null)}
+              onChange={(e) =>
+                handleClassChange(e.target.value || null)
+              }
             >
               {classes.map((code) => (
                 <option key={code} value={code}>
@@ -764,6 +898,7 @@ const CourseAdminDashboard = () => {
             token={token}
             dispatch={dispatch}
             onSaveSuccess={notifySaveSuccess}
+            onDirtyChange={handleSectionDirty("groups")}
           />
           <QuestionsTable
             key={`questions-${selectedClass}`}
@@ -771,6 +906,7 @@ const CourseAdminDashboard = () => {
             token={token}
             dispatch={dispatch}
             onSaveSuccess={notifySaveSuccess}
+            onDirtyChange={handleSectionDirty("questions")}
           />
           <ClassBtsSettings
             key={`settings-${selectedClass}`}
@@ -778,6 +914,7 @@ const CourseAdminDashboard = () => {
             token={token}
             dispatch={dispatch}
             onSaveSuccess={notifySaveSuccess}
+            onDirtyChange={handleSectionDirty("settings")}
           />
           <Downloads
             classCode={selectedClass}
