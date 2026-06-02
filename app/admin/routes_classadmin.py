@@ -244,17 +244,24 @@ def groups_csv_template(identity, class_code):
     if not _check_class_access(admin_id, class_code, role):
         return jsonify(msg="Forbidden"), 403
 
+    groups = (
+        Group.query.filter_by(class_code=class_code)
+        .order_by(Group.number)
+        .all()
+    )
+
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["number", "name"])
-    writer.writerow(["1", "Team Alpha"])
+    for g in groups:
+        writer.writerow([g.number, g.name])
     output.seek(0)
 
     return send_file(
         io.BytesIO(output.getvalue().encode("utf-8")),
         mimetype="text/csv",
         as_attachment=True,
-        download_name=f"groups_template_{class_code}.csv",
+        download_name=f"groups_{class_code}.csv",
     )
 
 

@@ -132,7 +132,7 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
       const blob = await res.blob();
       const name = pickFilename(
         res.headers.get("Content-Disposition"),
-        `groups_template_${classCode}.csv`
+        `groups_${classCode}.csv`
       );
       triggerBlobDownload(blob, name);
     } catch (e) {
@@ -286,7 +286,7 @@ const GroupsTable = ({ classCode, token, dispatch, onSaveSuccess }) => {
               disabled={csvBusy || loading}
               onClick={downloadCsvTemplate}
             >
-              Download CSV template
+              Download CSV
             </PrimaryButton>
             <input
               ref={csvFileInputRef}
