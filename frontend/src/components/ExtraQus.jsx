@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ExtraInputsContainer,
   ExtraQusTitle,
@@ -8,13 +8,10 @@ import {
 const ExtraQus = ({ questionNum, question, rankHandler2 }) => {
   const [userRating, setUserRatings] = useState();
 
-  useEffect(() => {
-    rankHandler2(questionNum, userRating);
-  }, [userRating, questionNum]);
-
   const ratingHandler = (e) => {
-    setUserRatings(parseInt(e.target.value));
-    rankHandler2(questionNum, e.target.value);
+    const rating = parseInt(e.target.value, 10);
+    setUserRatings(rating);
+    rankHandler2(questionNum, rating);
   };
 
   const nameAttribute = `userRating${questionNum}`;
