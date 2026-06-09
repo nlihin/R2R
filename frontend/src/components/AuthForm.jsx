@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Form,
   Link,
@@ -9,6 +9,7 @@ import {
 
 import classes from "./AuthForm.module.css";
 import PrivacyModal from "./PrivacyModal";
+import PrivacyWarningModal from "./PrivacyWarningModal";
 
 function AuthForm({ modalText, modalToggle }) {
   const data = useActionData();
@@ -19,6 +20,9 @@ function AuthForm({ modalText, modalToggle }) {
   const [classCode, setClassCode] = useState();
   const [privacyConsent, setPrivacyConsent] = useState(true);
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+  const [privacyWarningOpen, setPrivacyWarningOpen] = useState(false);
+  const formRef = useRef(null);
+  const skipPrivacyWarningRef = useRef(false);
   
   let mode = searchParams.get("mode") || "login";
   const isLogin = mode === "login";
@@ -62,15 +66,37 @@ function AuthForm({ modalText, modalToggle }) {
         modalToggle(true);
         return;
       }
+      if (!privacyConsent && !skipPrivacyWarningRef.current) {
+        e.preventDefault();
+        setPrivacyWarningOpen(true);
+        return;
+      }
+      skipPrivacyWarningRef.current = false;
     }
+  };
+
+  const handleContinueWithoutConsent = () => {
+    setPrivacyWarningOpen(false);
+    skipPrivacyWarningRef.current = true;
+    formRef.current?.requestSubmit();
   };
   return (
     <>
-      <PrivacyModal 
-        isOpen={privacyModalOpen} 
-        onClose={() => setPrivacyModalOpen(false)} 
+      <PrivacyModal
+        isOpen={privacyModalOpen}
+        onClose={() => setPrivacyModalOpen(false)}
       />
-      <Form method="post" className={classes.form} onSubmit={handleFormSubmit}>
+      <PrivacyWarningModal
+        isOpen={privacyWarningOpen}
+        onClose={() => setPrivacyWarningOpen(false)}
+        onContinue={handleContinueWithoutConsent}
+      />
+      <Form
+        ref={formRef}
+        method="post"
+        className={classes.form}
+        onSubmit={handleFormSubmit}
+      >
         <h1>{isLogin ? "Log in" : "Register"}</h1>
         <p>
           <input

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutAdmin } from "../../store/admin/admin-Slice";
@@ -14,6 +14,9 @@ import "../../styles/admin.scss";
 import SysAdminDashboard from "./SysAdminDashboard";
 import CourseAdminDashboard from "./CourseAdminDashboard";
 
+const LOGOUT_UNSAVED_MSG =
+  "You have unsaved changes. Log out without saving?";
+
 const AdminDashboard = () => {
   const dispatch = useDispatch();
   const adminState = useSelector((s) => s.admin || {});
@@ -25,6 +28,16 @@ const AdminDashboard = () => {
   const adminUsername = adminState.adminUsername || "";
 
   const navigate = useNavigate();
+  const [courseAdminHasUnsavedChanges, setCourseAdminHasUnsavedChanges] =
+    useState(false);
+  const suppressCourseAdminNavGuardRef = useRef(false);
+
+  useEffect(() => {
+    if (role !== "courseadmin") {
+      setCourseAdminHasUnsavedChanges(false);
+      suppressCourseAdminNavGuardRef.current = false;
+    }
+  }, [role]);
 
   useEffect(() => {
     if (!token) {
@@ -45,6 +58,10 @@ const AdminDashboard = () => {
     role === "sysadmin" ? "System Admin" : "Course Admin";
 
   const handleLogout = () => {
+    if (role === "courseadmin" && courseAdminHasUnsavedChanges) {
+      if (!window.confirm(LOGOUT_UNSAVED_MSG)) return;
+    }
+    suppressCourseAdminNavGuardRef.current = true;
     dispatch(logoutAdmin());
     navigate("/admin/login");
   };
@@ -69,7 +86,10 @@ const AdminDashboard = () => {
         {role === "sysadmin" ? (
           <SysAdminDashboard />
         ) : (
-          <CourseAdminDashboard />
+          <CourseAdminDashboard
+            onUnsavedChangesChange={setCourseAdminHasUnsavedChanges}
+            suppressNavigationGuardRef={suppressCourseAdminNavGuardRef}
+          />
         )}
       </AdminDashboardWrapper>
 

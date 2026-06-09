@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, json, useNavigate } from "react-router-dom";
-import { parseGroupsConflict } from "../utlis/parsing";
 
 import BasicModal from "../components/BasicModal";
 import QesCard from "../components/QesCard";
@@ -135,6 +134,37 @@ const GroupRatings = () => {
     setOtherQuestionsData({ ...otherQuestionsTemp });
   };
 
+  const normalizeExtraAnswer = (value) => {
+    if (value === undefined || value === null || value === "") return null;
+    const num = Number(value);
+    if (
+      !Number.isFinite(num) ||
+      num < 1 ||
+      num > 5 ||
+      num !== Math.floor(num)
+    ) {
+      return null;
+    }
+    return num;
+  };
+
+  const validateExtraQuestions = () => {
+    const questions = groupData?.questions;
+    if (!questions || typeof questions !== "object") return true;
+
+    const questionKeys = Object.keys(questions);
+    if (questionKeys.length === 0) return true;
+
+    for (const questionNum of questionKeys) {
+      if (normalizeExtraAnswer(otherQuestionsData[questionNum]) === null) {
+        setModalToggle(true);
+        setModalText("Please answer all additional questions.");
+        return false;
+      }
+    }
+    return true;
+  };
+
 
   const validateGroupRating = () => {
     if (!btsEnabled) {
@@ -180,7 +210,11 @@ const GroupRatings = () => {
   };
 
   const validateGroup = () => {
-    if (validateGroupRating() && validateGroupRanking()) {
+    if (
+      validateGroupRating() &&
+      validateGroupRanking() &&
+      validateExtraQuestions()
+    ) {
       submitHandler();
     }
   };
