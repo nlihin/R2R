@@ -1,6 +1,8 @@
 from datetime import datetime
+from typing import Dict, Optional
+
 from app import db
-from app.models import Participant, RankNewItem, Pairwise
+from app.models import Group, Participant, RankNewItem, Pairwise
 
 
 class RankingService:
@@ -112,19 +114,28 @@ class RankingService:
         if exclude_group_id is not None:
             conflicts = [gid for gid in conflicts if gid != exclude_group_id]
 
+        conflicts.sort(key=lambda gid: (table.get(gid, {}).get("position", 9999), gid))
+
         print(f"[CONFLICTS] rating={rating}, exclude={exclude_group_id}: {conflicts}")
         return conflicts
 
     @staticmethod
     def compare_groups_by_pairwise(
-        group_a: int, group_b: int, username: str, class_code: str
+        group_a: int,
+        group_b: int,
+        username: str,
+        class_code: str,
+        id_to_number: Optional[Dict[int, int]] = None,
     ) -> int:
         participant_id = RankingService._get_participant_id(username, class_code)
         if not participant_id:
             return 0
 
-        q1 = f"{group_a},{group_b}"
-        q2 = f"{group_b},{group_a}"
+        id_to_number = id_to_number or {}
+        num_a = id_to_number.get(group_a, group_a)
+        num_b = id_to_number.get(group_b, group_b)
+        q1 = f"{num_a},{num_b}"
+        q2 = f"{num_b},{num_a}"
 
         p1 = (
             Pairwise.query.filter_by(
@@ -152,14 +163,14 @@ class RankingService:
         winner = pair.answer
 
         if pair.pairwise_q == q1:
-            if winner == group_a:
+            if winner == num_a:
                 return 1
-            if winner == group_b:
+            if winner == num_b:
                 return -1
         else:
-            if winner == group_b:
+            if winner == num_b:
                 return -1
-            if winner == group_a:
+            if winner == num_a:
                 return 1
 
         return 0
@@ -183,6 +194,13 @@ class RankingService:
         if len(conflicts) <= 1:
             return conflicts
 
+        rows = (
+            db.session.query(Group.id, Group.number)
+            .filter(Group.class_code == class_code, Group.id.in_(conflicts))
+            .all()
+        )
+        id_to_number = {row.id: row.number for row in rows}
+
         graph: dict[int, list[int]] = {g: [] for g in conflicts}
         in_degree: dict[int, int] = {g: 0 for g in conflicts}
 
@@ -192,7 +210,11 @@ class RankingService:
                 if a == b:
                     continue
                 c = RankingService.compare_groups_by_pairwise(
-                    a, b, username=username, class_code=class_code
+                    a,
+                    b,
+                    username=username,
+                    class_code=class_code,
+                    id_to_number=id_to_number,
                 )
                 if c > 0:
                     graph[a].append(b)
@@ -200,7 +222,14 @@ class RankingService:
 
         print(f"[TOPOSORT] Graph edges: {graph}")
         print(f"[TOPOSORT] In-degrees: {in_degree}")
+
+        table = RankingService._get_table(username, class_code)
+
+        def _tie_key(gid):
+            return (table.get(gid, {}).get("position", 9999), gid)
+
         queue = [g for g in conflicts if in_degree[g] == 0]
+        queue.sort(key=_tie_key)
         result = []
 
         print(f"[TOPOSORT] Initial queue (in_degree=0): {queue}")
@@ -214,6 +243,7 @@ class RankingService:
                 if in_degree[neighbor] == 0:
                     queue.append(neighbor)
                     print(f"[TOPOSORT]   Added to queue: {neighbor}")
+            queue.sort(key=_tie_key)
 
         print(f"[TOPOSORT] Final order: {result}\n")
         return result
@@ -240,6 +270,23 @@ class RankingService:
 
         db.session.commit()
         print("[SAVE_DB] Committed\n")
+
+    @staticmethod
+    def _group_ids_to_numbers(class_code: str, group_ids: list) -> list:
+        if not group_ids:
+            return []
+        rows = (
+            db.session.query(Group.id, Group.number)
+            .filter(Group.class_code == class_code, Group.id.in_(group_ids))
+            .all()
+        )
+        id_to_number = {row.id: row.number for row in rows}
+        numbers = []
+        for gid in group_ids:
+            num = id_to_number.get(gid)
+            if num is not None:
+                numbers.append(num)
+        return numbers
 
     @staticmethod
     def add_group_to_rank(
@@ -337,14 +384,20 @@ class RankingService:
 
         conflicts_to_show = [gid for gid in sorted_ids if gid != group_id]
 
-        conflicts_to_show.sort(
-            key=lambda gid: table.get(gid, {}).get("position", 9999)
+        conflicts_for_api = RankingService._group_ids_to_numbers(
+            class_code, conflicts_to_show
         )
-
-        print(f"[ADD_GROUP] RETURNING: conflicts={conflicts_to_show}")
+        print(
+            f"[ADD_GROUP] RETURNING: conflict_ids={conflicts_to_show}, "
+            f"conflict_numbers={conflicts_for_api}"
+        )
         print("=" * 100 + "\n")
 
-        return {"existing": False, "conflict": True, "sorted_groups": conflicts_to_show}
+        return {
+            "existing": False,
+            "conflict": True,
+            "sorted_groups": conflicts_for_api,
+        }
 
     @staticmethod
     def resort_all_ratings_for_user(username: str, class_code: str) -> dict:
