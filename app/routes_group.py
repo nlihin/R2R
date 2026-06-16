@@ -20,22 +20,22 @@ def handle_group_options():
 def get_rating_info():
     classCode = current_user.class_code
     currentUser = current_user.username
-    group_nums = [group.number for group in Group.query.filter_by(class_code=classCode)]
+    groups = Group.query.filter_by(class_code=classCode).all()
 
     participant = Participant.query.filter_by(
         username=str(currentUser), class_code=classCode
     ).first()
 
-    rated_group_ids = []
+    rated_group_ids = set()
     if participant:
-        rated_group_ids = [
+        rated_group_ids = {
             item.group_id
             for item in RankNewItem.query.filter_by(
                 participant_id=participant.participant_id
             ).all()
-        ]
+        }
 
-    group_info = {str(g): (g in rated_group_ids) for g in group_nums}
+    group_info = {str(g.number): (g.id in rated_group_ids) for g in groups}
 
     group_info['class_code'] = str(classCode)
 

@@ -90,6 +90,16 @@ def rate_page():
         if group_number is None or rating is None:
             return jsonify(status=400, msg="Missing required fields"), 400
 
+        group = Group.query.filter_by(
+            class_code=class_code, number=int(group_number)
+        ).one_or_none()
+        if not group:
+            print(
+                f"[rate_page] Group not found: class_code={class_code}, "
+                f"number={group_number}"
+            )
+            return jsonify(status=400, msg="Group not registered"), 400
+
         if bts_enabled and not crowd_ratings:
             return jsonify(
                 status=400,
@@ -113,7 +123,7 @@ def rate_page():
 
         already_rated = RankNewItem.query.filter_by(
             participant_id=participant.participant_id,
-            group_id=int(group_number),
+            group_id=group.id,
         ).first()
 
         if already_rated:
@@ -177,7 +187,7 @@ def rate_page():
         result = RankingService.add_group_to_rank(
             username=username,
             class_code=class_code,
-            group_id=int(group_number),
+            group_id=group.id,
             rating=int(rating),
         )
 
