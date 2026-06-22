@@ -23,6 +23,7 @@ function AuthForm({ modalText, modalToggle }) {
   const [privacyWarningOpen, setPrivacyWarningOpen] = useState(false);
   const formRef = useRef(null);
   const skipPrivacyWarningRef = useRef(false);
+  const pendingConsentSubmitRef = useRef(false);
   
   let mode = searchParams.get("mode") || "login";
   const isLogin = mode === "login";
@@ -37,6 +38,12 @@ function AuthForm({ modalText, modalToggle }) {
   useEffect(() => {
     modalToggle(false);
   }, [mode, modalToggle]);
+
+  useEffect(() => {
+    if (!pendingConsentSubmitRef.current || !privacyConsent) return;
+    pendingConsentSubmitRef.current = false;
+    formRef.current?.requestSubmit();
+  }, [privacyConsent]);
 
   const chackingID = (e) => {
     if (e.target.id === "username") {
@@ -75,6 +82,20 @@ function AuthForm({ modalText, modalToggle }) {
     }
   };
 
+  const handleDismissPrivacyWarning = () => {
+    setPrivacyWarningOpen(false);
+    setPrivacyConsent(true);
+    skipPrivacyWarningRef.current = false;
+    pendingConsentSubmitRef.current = false;
+  };
+
+  const handleConsentAndContinue = () => {
+    setPrivacyWarningOpen(false);
+    skipPrivacyWarningRef.current = false;
+    pendingConsentSubmitRef.current = true;
+    setPrivacyConsent(true);
+  };
+
   const handleContinueWithoutConsent = () => {
     setPrivacyWarningOpen(false);
     skipPrivacyWarningRef.current = true;
@@ -88,7 +109,8 @@ function AuthForm({ modalText, modalToggle }) {
       />
       <PrivacyWarningModal
         isOpen={privacyWarningOpen}
-        onClose={() => setPrivacyWarningOpen(false)}
+        onClose={handleDismissPrivacyWarning}
+        onConsent={handleConsentAndContinue}
         onContinue={handleContinueWithoutConsent}
       />
       <Form

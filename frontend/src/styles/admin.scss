@@ -230,6 +230,10 @@ input.admin-text-input {
   background: transparent;
 }
 
+.admin-inline-msg.admin-unsaved-hint {
+  color: #ff001a;
+}
+
 .admin-download-options {
   display: flex;
   flex-wrap: wrap;
