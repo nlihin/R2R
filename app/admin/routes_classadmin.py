@@ -410,9 +410,21 @@ def download_data(identity, class_code):
 
     if "rank_new_items" in datasets:
         df = pd.read_sql(
-            "SELECT rni.* FROM rank_new_items rni "
-            "INNER JOIN participants p ON p.participant_id = rni.participant_id "
-            "WHERE p.class_code = %(cc)s",
+            'SELECT '
+            'rni.id, '
+            'rni.participant_id, '
+            'g.number AS group_number, '
+            'rni.rating, '
+            'rni.position, '
+            'rni.class_code, '
+            'rni.updated_at, '
+            'rni.created_at, '
+            'rni.feedback '
+            'FROM rank_new_items rni '
+            'INNER JOIN participants p ON p.participant_id = rni.participant_id '
+            'INNER JOIN "group" g ON g.id = rni.group_id '
+            'WHERE p.class_code = %(cc)s AND rni.class_code = %(cc)s '
+            'ORDER BY g.number, rni.participant_id',
             db.engine,
             params=params,
         )

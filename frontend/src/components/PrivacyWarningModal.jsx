@@ -99,30 +99,33 @@ const PrimaryButton = styled.button`
   }
 `;
 
-const PrivacyWarningModal = ({ isOpen, onClose, onContinue }) => {
+const PrivacyWarningModal = ({ isOpen, onClose, onConsent, onContinue }) => {
   if (!isOpen) return null;
 
   return (
     <ModalOverlay onClick={onClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
-          <ModalTitle>Data Processing Notice</ModalTitle>
+          <ModalTitle>Are you sure?</ModalTitle>
           <HeaderCloseButton type="button" onClick={onClose} aria-label="Close">
             ×
           </HeaderCloseButton>
         </ModalHeader>
         <ModalBody>
           <p>
-            You have chosen not to agree to the data processing policy. You can
-            still continue with registration.
+            You unchecked the research consent box.
+          </p>
+          <p>
+            Only anonymized data are used for research. Your participation helps us improve the system
+            and support academic research. Your course grade will not be affected.
           </p>
         </ModalBody>
         <ModalFooter>
-          <CloseButton type="button" onClick={onClose}>
-            Close
+          <CloseButton type="button" onClick={onConsent}>
+            OK, I Consent
           </CloseButton>
           <PrimaryButton type="button" onClick={onContinue}>
-            Register
+            Continue Without Consent
           </PrimaryButton>
         </ModalFooter>
       </ModalContent>
