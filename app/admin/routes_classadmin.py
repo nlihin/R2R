@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from app import db
 from app.admin import admin_bp
 from app.admin.models_admin import AdminUser, AdminClass
-from app.models import Group, Question, Class_codes
+from app.models import Group, Question, Class_codes, RankNewItem
 
 def require_classadmin(f):
     @wraps(f)
@@ -49,6 +49,23 @@ def require_classadmin(f):
         return f(identity, *args, **kwargs)
 
     return decorated
+
+
+def _class_has_rating_data(class_code: str) -> bool:
+    return (
+        db.session.query(RankNewItem.id)
+        .join(Group, RankNewItem.group_id == Group.id)
+        .filter(Group.class_code == class_code)
+        .first()
+        is not None
+    )
+
+
+def _group_has_rating_data(group_id: int) -> bool:
+    return (
+        RankNewItem.query.filter_by(group_id=group_id).first()
+        is not None
+    )
 
 
 def _check_class_access(admin_id: str, class_code: str, role: str) -> bool:
@@ -179,52 +196,81 @@ def save_groups(identity, class_code):
 
     incoming_ids = {x["id"] for x in normalized if x["id"] is not None}
     existing = Group.query.filter_by(class_code=class_code).all()
-    for g in existing:
-        if g.id not in incoming_ids:
-            db.session.delete(g)
+    existing_by_id = {g.id: g for g in existing}
 
-    db.session.flush()
+    if _class_has_rating_data(class_code):
+        for row in normalized:
+            if row["id"] is None:
+                continue
+            g = existing_by_id.get(row["id"])
+            if not g:
+                return jsonify(
+                    msg="Unknown or out-of-scope group id for this class"
+                ), 400
+            if row["number"] != g.number:
+                return jsonify(
+                    msg="Access denied for requests to change group number."
+                ), 403
 
-    by_id = {}
-    for row in normalized:
-        if row["id"] is None:
-            continue
-        g = db.session.get(Group, row["id"])
-        if not g or g.class_code != class_code:
-            return jsonify(
-                msg="Unknown or out-of-scope group id for this class"
-            ), 400
-        by_id[row["id"]] = g
-
-    # Avoid unique (number, class_code) violations when renumbering (e.g. swaps)
-    for row in normalized:
-        if row["id"] is None:
-            continue
-        by_id[row["id"]].number = -by_id[row["id"]].id
-
-    db.session.flush()
-
-    for row in normalized:
-        if row["id"] is not None:
-            g = by_id[row["id"]]
-            g.number = row["number"]
-            g.name = row["name"]
-        else:
-            db.session.add(
-                Group(
-                    number=row["number"],
-                    name=row["name"],
-                    class_code=class_code,
-                )
-            )
+        for g in existing:
+            if g.id not in incoming_ids and _group_has_rating_data(g.id):
+                return jsonify(
+                    msg=(
+                        f"Cannot delete group {g.number} ({g.name}): "
+                        "it has rating data."
+                    )
+                ), 400
 
     try:
+        for g in existing:
+            if g.id not in incoming_ids:
+                db.session.delete(g)
+
+        db.session.flush()
+
+        by_id = {}
+        for row in normalized:
+            if row["id"] is None:
+                continue
+            g = db.session.get(Group, row["id"])
+            if not g or g.class_code != class_code:
+                db.session.rollback()
+                return jsonify(
+                    msg="Unknown or out-of-scope group id for this class"
+                ), 400
+            by_id[row["id"]] = g
+
+        # Avoid unique (number, class_code) violations when renumbering (e.g. swaps)
+        for row in normalized:
+            if row["id"] is None:
+                continue
+            by_id[row["id"]].number = -by_id[row["id"]].id
+
+        db.session.flush()
+
+        for row in normalized:
+            if row["id"] is not None:
+                g = by_id[row["id"]]
+                g.number = row["number"]
+                g.name = row["name"]
+            else:
+                db.session.add(
+                    Group(
+                        number=row["number"],
+                        name=row["name"],
+                        class_code=class_code,
+                    )
+                )
+
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
         return jsonify(
             msg="Could not save groups (duplicate number or data conflict)"
         ), 400
+    except Exception:
+        db.session.rollback()
+        raise
 
     return jsonify(
         msg="Saved",
@@ -285,21 +331,26 @@ def import_groups_csv(identity, class_code):
     if "number" not in df.columns or "name" not in df.columns:
         return jsonify(msg="CSV must have columns: number, name"), 400
 
-    for _, row in df.iterrows():
-        existing = Group.query.filter_by(
-            number=int(row["number"]), class_code=class_code
-        ).first()
-        if existing:
-            existing.name = str(row["name"])
-        else:
-            db.session.add(
-                Group(
-                    number=int(row["number"]),
-                    name=str(row["name"]),
-                    class_code=class_code,
+    try:
+        for _, row in df.iterrows():
+            existing = Group.query.filter_by(
+                number=int(row["number"]), class_code=class_code
+            ).first()
+            if existing:
+                existing.name = str(row["name"])
+            else:
+                db.session.add(
+                    Group(
+                        number=int(row["number"]),
+                        name=str(row["name"]),
+                        class_code=class_code,
+                    )
                 )
-            )
-    db.session.commit()
+        db.session.commit()
+    except (IntegrityError, ValueError):
+        db.session.rollback()
+        return jsonify(msg="Could not import groups (invalid data or conflict)"), 400
+
     return jsonify(msg=f"Imported {len(df)} rows"), 200
 
 
