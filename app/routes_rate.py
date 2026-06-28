@@ -274,3 +274,68 @@ def save_pairwise():
 
         traceback.print_exc()
         return jsonify(status=400, msg=str(exc)), 400
+
+
+@rate.route("/rate/rollback-pending", methods=["POST"])
+@jwt_required()
+@cross_origin()
+def rollback_pending():
+    try:
+        data = request.get_json(silent=True) or {}
+        group_number = data.get("group_number")
+        conflict_started_at = data.get("conflict_started_at")
+
+        if group_number is None or not conflict_started_at:
+            return jsonify(
+                status=400,
+                msg="Missing required fields: group_number, conflict_started_at",
+            ), 400
+
+        class_code = current_user.class_code
+        username = str(current_user.username)
+
+        rolled_back = RankingService.rollback_pending_rating(
+            username=username,
+            class_code=class_code,
+            group_number=int(group_number),
+            conflict_started_at=conflict_started_at,
+        )
+
+        return jsonify(status=200, rolled_back=rolled_back)
+    except Exception as exc:
+        db.session.rollback()
+        print(f"[rollback_pending] ERROR: {exc}")
+        import traceback
+
+        traceback.print_exc()
+        return jsonify(status=400, msg=str(exc)), 400
+
+
+@rate.route("/rate/complete-pairwise", methods=["POST"])
+@jwt_required()
+@cross_origin()
+def complete_pairwise():
+    try:
+        data = request.get_json(silent=True) or {}
+        group_number = data.get("group_number")
+
+        if group_number is None:
+            return jsonify(status=400, msg="Missing required field: group_number"), 400
+
+        class_code = current_user.class_code
+        username = str(current_user.username)
+
+        RankingService.mark_pairwise_complete(
+            username=username,
+            class_code=class_code,
+            group_number=int(group_number),
+        )
+
+        return jsonify(status=200)
+    except Exception as exc:
+        db.session.rollback()
+        print(f"[complete_pairwise] ERROR: {exc}")
+        import traceback
+
+        traceback.print_exc()
+        return jsonify(status=400, msg=str(exc)), 400

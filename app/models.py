@@ -119,6 +119,7 @@ class RankNewItem(db.Model):
     rating = db.Column(db.Integer, nullable=False)
     class_code = db.Column(db.String(50), nullable=False, index=True)
     position = db.Column(db.Integer, default=1)
+    pairwise_pending = db.Column(db.Boolean, nullable=False, default=False)
     feedback = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
