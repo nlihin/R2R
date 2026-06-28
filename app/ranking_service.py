@@ -1,8 +1,15 @@
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from app import db
-from app.models import Group, Participant, RankNewItem, Pairwise
+from app.models import (
+    CrowdRating,
+    Group,
+    Participant,
+    Pairwise,
+    QuestionAnswer,
+    RankNewItem,
+)
 
 
 class RankingService:
@@ -354,6 +361,9 @@ class RankingService:
             print("=" * 100 + "\n")
             return {"existing": False, "conflict": False, "sorted_groups": []}
 
+        item.pairwise_pending = True
+        db.session.commit()
+
         print("[ADD_GROUP] Sorting with TOPOLOGICAL SORT...")
 
         sorted_ids = RankingService.resolve_conflicts_toposort(
@@ -441,6 +451,147 @@ class RankingService:
         final_table = RankingService._get_table(username, class_code)
         print(f"[RESORT] DONE")
         return final_table
+
+    @staticmethod
+    def _pairwise_involves_group_number(pairwise_q: str, group_number: int) -> bool:
+        parts = [p.strip() for p in pairwise_q.split(",") if p.strip()]
+        return str(group_number) in parts
+
+    @staticmethod
+    def rollback_pending_rating(
+        username: str,
+        class_code: str,
+        group_number: int,
+        conflict_started_at: Union[datetime, str],
+    ) -> bool:
+        """
+        Roll back an in-progress rating for one group (pairwise not completed).
+
+        Pairwise scope: rows for this participant/class where pairwise_q includes
+        group_number and answer_time >= conflict_started_at. Assumes one active
+        conflict session per group; older pairwise for the same pair from prior
+        sessions should have answer_time before conflict_started_at.
+        """
+        participant = Participant.query.filter_by(
+            username=username,
+            class_code=class_code,
+        ).first()
+        if not participant:
+            print("[ROLLBACK] Participant not found, no-op")
+            return False
+
+        group = Group.query.filter_by(
+            number=int(group_number),
+            class_code=class_code,
+        ).one_or_none()
+        if not group:
+            print("[ROLLBACK] Group not found, no-op")
+            return False
+
+        item = RankNewItem.query.filter_by(
+            participant_id=participant.participant_id,
+            group_id=group.id,
+        ).first()
+        if not item:
+            print("[ROLLBACK] RankNewItem not found, no-op")
+            return False
+
+        if not item.pairwise_pending:
+            print("[ROLLBACK] Rating already complete (not pending), no-op")
+            return False
+
+        if isinstance(conflict_started_at, str):
+            started_at = datetime.fromisoformat(
+                conflict_started_at.replace("Z", "+00:00")
+            )
+        else:
+            started_at = conflict_started_at
+
+        if started_at.tzinfo is not None:
+            started_at = started_at.replace(tzinfo=None)
+
+        group_num = int(group_number)
+        pairwise_rows = Pairwise.query.filter_by(
+            participant_id=participant.participant_id,
+            class_code=class_code,
+        ).all()
+        deleted_pairwise = 0
+        for row in pairwise_rows:
+            if row.answer_time and row.answer_time.replace(tzinfo=None) < started_at:
+                continue
+            if not RankingService._pairwise_involves_group_number(
+                row.pairwise_q, group_num
+            ):
+                continue
+            db.session.delete(row)
+            deleted_pairwise += 1
+
+        CrowdRating.query.filter_by(
+            participant_id=participant.participant_id,
+            group_number=group_num,
+        ).delete(synchronize_session=False)
+
+        QuestionAnswer.query.filter_by(
+            participant_id=participant.participant_id,
+            group_number=group_num,
+        ).delete(synchronize_session=False)
+
+        db.session.delete(item)
+        db.session.commit()
+
+        cache_key = RankingService._cache_key(username, class_code)
+        if cache_key in RankingService.user_rank_cache:
+            RankingService.user_rank_cache[cache_key]["table"].pop(group.id, None)
+
+        RankingService.load_user_rank_cache(username, class_code)
+        RankingService.resort_all_ratings_for_user(username, class_code)
+
+        print(
+            f"[ROLLBACK] Done: group_number={group_num}, "
+            f"deleted_pairwise={deleted_pairwise}"
+        )
+        return True
+
+    @staticmethod
+    def mark_pairwise_complete(
+        username: str,
+        class_code: str,
+        group_number: int,
+    ) -> bool:
+        """Clear pairwise_pending after the participant finishes binary search."""
+        participant = Participant.query.filter_by(
+            username=username,
+            class_code=class_code,
+        ).first()
+        if not participant:
+            print("[COMPLETE_PAIRWISE] Participant not found, no-op")
+            return False
+
+        group = Group.query.filter_by(
+            number=int(group_number),
+            class_code=class_code,
+        ).one_or_none()
+        if not group:
+            print("[COMPLETE_PAIRWISE] Group not found, no-op")
+            return False
+
+        item = RankNewItem.query.filter_by(
+            participant_id=participant.participant_id,
+            group_id=group.id,
+        ).first()
+        if not item:
+            print("[COMPLETE_PAIRWISE] RankNewItem not found, no-op")
+            return False
+
+        if not item.pairwise_pending:
+            print("[COMPLETE_PAIRWISE] Already complete, no-op")
+            return False
+
+        item.pairwise_pending = False
+        item.updated_at = datetime.now()
+        db.session.commit()
+        print(f"[COMPLETE_PAIRWISE] group_number={group_number}")
+        return True
 
     @staticmethod
     def print_cache(username: str, class_code: str) -> None:

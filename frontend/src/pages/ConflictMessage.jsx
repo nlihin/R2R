@@ -41,7 +41,9 @@ const ConflictMessage = ({
   conflictStorageKey,
   initialLow,
   initialHigh,
+  conflictStartedAt,
   onBoundsChange,
+  allowConflictNavigation,
 }) => {
   const [secondTempGroups, setSecondTempGroups] = useState([]);
   const [low, setLow] = useState(typeof initialLow === "number" ? initialLow : 0);
@@ -111,6 +113,60 @@ const ConflictMessage = ({
     setConflictStartTime(new Date());
     console.log("[ConflictMessage] USEEFFECT END\n");
   }, [groups, currentGroup, currentClassCode, conflictStorageKey]);
+
+
+  const buildConflictPayload = (groupsList, lowVal, highVal) => {
+    const payload = {
+      groups: groupsList,
+      low: lowVal,
+      high: highVal,
+    };
+    if (conflictStartedAt) {
+      payload.conflictStartedAt = conflictStartedAt;
+    }
+    return payload;
+  };
+
+  const finishConflict = async () => {
+    const token = tokenLoader();
+    setIsSavingPairwise(true);
+    setSaveError(null);
+
+    try {
+      const response = await fetch(BaseURL + "rate/complete-pairwise", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify({
+          group_number: parseInt(currentGroup, 10),
+        }),
+      });
+
+      if (!response.ok) {
+        let errorText = "Could not complete comparison";
+        try {
+          const errorData = await response.json();
+          errorText = errorData.msg || errorText;
+        } catch (_) {}
+        throw new Error(errorText);
+      }
+
+      window.localStorage.removeItem(conflictStorageKey);
+      if (typeof allowConflictNavigation === "function") {
+        allowConflictNavigation();
+      }
+      isConflicToggle(false);
+    } catch (error) {
+      console.error("[finishConflict] Error:", error);
+      setSaveError(error.message || "Could not complete comparison");
+      window.alert(error.message || "Could not complete comparison");
+    } finally {
+      setIsSavingPairwise(false);
+    }
+  };
 
 
   const savePairwise = async (selectedGroup, winner) => {
@@ -188,17 +244,17 @@ const ConflictMessage = ({
 
     if (newLow > high) {
       console.log("[lowerRatings] Binary search complete, closing conflict");
-      isConflicToggle(false);
+      finishConflict();
     } else {
       const newMid = Math.floor((newLow + high) / 2);
       if (typeof onBoundsChange === "function") {
         onBoundsChange(newLow, high);
-        const payload = {
-          groups: secondTempGroups,
-          low: newLow,
-          high: high,
-        };
-        window.localStorage.setItem(conflictStorageKey, JSON.stringify(payload));
+        window.localStorage.setItem(
+          conflictStorageKey,
+          JSON.stringify(
+            buildConflictPayload(secondTempGroups, newLow, high)
+          )
+        );
       }
       console.log(`[lowerRatings] Next comparison: groups[${newMid}] = ${secondTempGroups[newMid]}`);
       displayNameGroup(secondTempGroups[newMid]);
@@ -227,17 +283,17 @@ const ConflictMessage = ({
 
     if (low > newHigh) {
       console.log("[higherRatings] Binary search complete, closing conflict");
-      isConflicToggle(false);
+      finishConflict();
     } else {
       const newMid = Math.floor((low + newHigh) / 2);
       if (typeof onBoundsChange === "function") {
         onBoundsChange(low, newHigh);
-        const payload = {
-          groups: secondTempGroups,
-          low: low,
-          high: newHigh,
-        };
-        window.localStorage.setItem(conflictStorageKey, JSON.stringify(payload));
+        window.localStorage.setItem(
+          conflictStorageKey,
+          JSON.stringify(
+            buildConflictPayload(secondTempGroups, low, newHigh)
+          )
+        );
       }
       console.log(`[higherRatings] Next comparison: groups[${newMid}] = ${secondTempGroups[newMid]}`);
       displayNameGroup(secondTempGroups[newMid]);
