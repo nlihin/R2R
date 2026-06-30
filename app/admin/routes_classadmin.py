@@ -433,7 +433,10 @@ def download_data(identity, class_code):
     files = {}
 
     df_participants = pd.read_sql(
-        "SELECT * FROM participants WHERE class_code = %(cc)s",
+        'SELECT p.*, u.confirm '
+        'FROM participants p '
+        'LEFT JOIN "user" u ON u.username = p.username AND u.class_code = p.class_code '
+        'WHERE p.class_code = %(cc)s',
         db.engine,
         params=params,
     )
