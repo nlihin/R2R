@@ -189,6 +189,7 @@ def rate_page():
             class_code=class_code,
             group_id=group.id,
             rating=int(rating),
+            feedback=feedback,
         )
 
         if result["existing"]:

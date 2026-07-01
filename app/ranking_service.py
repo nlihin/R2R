@@ -301,6 +301,7 @@ class RankingService:
         class_code: str,
         group_id: int,
         rating: int,
+        feedback: Optional[str] = None,
     ) -> dict:
         print("\n" + "=" * 100)
         print(f"[ADD_GROUP] START: username={username}, class_code={class_code}, group_id={group_id}, rating={rating}")
@@ -335,6 +336,7 @@ class RankingService:
             rating=rating,
             class_code=class_code,
             position=next_position,
+            feedback=feedback,
         )
         db.session.add(item)
         db.session.flush()
