@@ -4,8 +4,11 @@ from flask_cors import CORS, cross_origin
 from flask_jwt_extended import JWTManager
 import datetime
 import os
+from dotenv import load_dotenv
 
 from flask.helpers import send_from_directory
+
+load_dotenv()
 
 #added 8.4.25
 #added the or in the next line 23.1.2026
@@ -30,8 +33,22 @@ CORS(
 )
 
 app.config['SQLALCHEMY_DATABASE_URI'] = uri
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'asdfla234509sdflsdf235')
-app.config["JWT_SECRET_KEY"] = os.environ.get('JWT_SECRET_KEY', 'super-secret')
+
+_secret_key = os.environ.get("SECRET_KEY")
+if not _secret_key:
+    raise RuntimeError(
+        "SECRET_KEY environment variable must be set. "
+        "Copy .env.example to .env for local development."
+    )
+app.config["SECRET_KEY"] = _secret_key
+
+_jwt_secret_key = os.environ.get("JWT_SECRET_KEY")
+if not _jwt_secret_key:
+    raise RuntimeError(
+        "JWT_SECRET_KEY environment variable must be set. "
+        "Copy .env.example to .env for local development."
+    )
+app.config["JWT_SECRET_KEY"] = _jwt_secret_key
 app.config['DEBUG'] = True
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(seconds=18000)
