@@ -30,7 +30,7 @@ CORS(
 )
 
 app.config['SQLALCHEMY_DATABASE_URI'] = uri
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'asdfla234509sdflsdf235')
+app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
 app.config["JWT_SECRET_KEY"] = os.environ.get('JWT_SECRET_KEY', 'super-secret')
 app.config['DEBUG'] = True
 app.config['CORS_HEADERS'] = 'Content-Type'
