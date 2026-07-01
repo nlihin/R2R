@@ -33,6 +33,7 @@ def get_rating_info():
             for item in RankNewItem.query.filter_by(
                 participant_id=participant.participant_id
             ).all()
+            if not item.pairwise_pending
         }
 
     group_info = {str(g.number): (g.id in rated_group_ids) for g in groups}

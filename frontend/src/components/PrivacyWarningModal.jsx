@@ -121,11 +121,11 @@ const PrivacyWarningModal = ({ isOpen, onClose, onConsent, onContinue }) => {
           </p>
         </ModalBody>
         <ModalFooter>
-          <CloseButton type="button" onClick={onConsent}>
-            OK, I Consent
-          </CloseButton>
-          <PrimaryButton type="button" onClick={onContinue}>
+          <CloseButton type="button" onClick={onContinue}>
             Continue Without Consent
+          </CloseButton>
+          <PrimaryButton type="button" onClick={onConsent}>
+            OK, I Consent
           </PrimaryButton>
         </ModalFooter>
       </ModalContent>

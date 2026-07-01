@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link, useParams, json, useNavigate } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { Link, useParams, json, useNavigate, useBlocker } from "react-router-dom";
 
 import BasicModal from "../components/BasicModal";
 import QesCard from "../components/QesCard";
@@ -16,6 +16,8 @@ import {
 } from "./GroupRatingsStyles";
 import ConflictMessage from "./ConflictMessage";
 
+const PAIRWISE_LEAVE_MSG =
+  "You have not finished the comparison. Leave and discard this rating?";
 
 const GroupRatings = () => {
   const params = useParams();
@@ -29,6 +31,8 @@ const GroupRatings = () => {
   const [dataConflict, setDataConflict] = useState();
   const [conflictLow, setConflictLow] = useState(0);
   const [conflictHigh, setConflictHigh] = useState(-1);
+  const [conflictStartedAt, setConflictStartedAt] = useState(null);
+  const suppressNavigationGuardRef = useRef(false);
   // const [questions, setQuestions] = useState(["hey", "roi", "yoni"]);
   const [modalToggle, setModalToggle] = useState(false);
   const [modalText, setModalText] = useState();
@@ -49,10 +53,26 @@ const GroupRatings = () => {
         const savedHigh =
           typeof parsed.high === "number" ? parsed.high : groups.length - 1;
         if (groups.length > 0 && savedLow <= savedHigh) {
+          const startedAt =
+            typeof parsed.conflictStartedAt === "string"
+              ? parsed.conflictStartedAt
+              : new Date().toISOString();
           setIsConflict(true);
           setDataConflict(groups);
           setConflictLow(savedLow);
           setConflictHigh(savedHigh);
+          setConflictStartedAt(startedAt);
+          if (typeof parsed.conflictStartedAt !== "string") {
+            window.localStorage.setItem(
+              conflictStorageKey,
+              JSON.stringify({
+                groups,
+                low: savedLow,
+                high: savedHigh,
+                conflictStartedAt: startedAt,
+              })
+            );
+          }
         } else {
           window.localStorage.removeItem(conflictStorageKey);
         }
@@ -62,6 +82,99 @@ const GroupRatings = () => {
       }
     }
   }, [conflictStorageKey]);
+
+
+  const clearConflictState = () => {
+    window.localStorage.removeItem(conflictStorageKey);
+    setIsConflict(false);
+    setDataConflict(undefined);
+    setConflictLow(0);
+    setConflictHigh(-1);
+    setConflictStartedAt(null);
+  };
+
+  const rollbackPendingRating = async () => {
+    const tok = tokenLoader();
+    const startedAt = conflictStartedAt;
+    if (!startedAt) {
+      console.error("[rollbackPendingRating] Missing conflictStartedAt");
+      return false;
+    }
+
+    try {
+      const res = await fetch(BaseURL + "rate/rollback-pending", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: "Bearer " + tok,
+        },
+        body: JSON.stringify({
+          group_number: parseInt(params.groupId, 10),
+          conflict_started_at: startedAt,
+        }),
+      });
+
+      if (!res.ok) {
+        let errorText = "Could not discard rating";
+        try {
+          const errorData = await res.json();
+          errorText = errorData.msg || errorText;
+        } catch (_) {}
+        throw new Error(errorText);
+      }
+
+      await res.json();
+      clearConflictState();
+      return true;
+    } catch (error) {
+      console.error("[rollbackPendingRating] Error:", error);
+      return false;
+    }
+  };
+
+  const allowConflictNavigation = () => {
+    suppressNavigationGuardRef.current = true;
+  };
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isConflict &&
+      !suppressNavigationGuardRef.current &&
+      currentLocation.pathname !== nextLocation.pathname
+  );
+
+  useEffect(() => {
+    if (blocker.state !== "blocked") return;
+
+    const ok = window.confirm(PAIRWISE_LEAVE_MSG);
+    if (!ok) {
+      blocker.reset();
+      return;
+    }
+
+    (async () => {
+      const success = await rollbackPendingRating();
+      if (!success) {
+        window.alert("Could not discard rating. Please try again.");
+        blocker.reset();
+        return;
+      }
+      suppressNavigationGuardRef.current = true;
+      blocker.proceed();
+    })();
+  }, [blocker]);
+
+  useEffect(() => {
+    if (!isConflict) return undefined;
+
+    const onBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = true;
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [isConflict]);
 
 
   useEffect(() => {
@@ -107,9 +220,9 @@ const GroupRatings = () => {
   const isConflicToggle = (toggle) => {
     console.log("[isConflicToggle] toggle =", toggle);
     setIsConflict(toggle);
-    
+
     if (!toggle) {
-      window.localStorage.removeItem(conflictStorageKey);
+      clearConflictState();
       setTimeout(() => navigate("/"), 500);
     }
   };
@@ -260,14 +373,17 @@ const GroupRatings = () => {
       let conflictData = resData.conflicts;
       console.log("[submitHandler] Conflicts detected:", conflictData);
       if (Array.isArray(conflictData) && conflictData.length > 0) {
+        const startedAt = new Date().toISOString();
         setIsConflict(true);
         setDataConflict(conflictData);
         setConflictLow(0);
         setConflictHigh(conflictData.length - 1);
+        setConflictStartedAt(startedAt);
         const payload = {
           groups: conflictData,
           low: 0,
           high: conflictData.length - 1,
+          conflictStartedAt: startedAt,
         };
         window.localStorage.setItem(conflictStorageKey, JSON.stringify(payload));
       } else {
@@ -294,7 +410,9 @@ const GroupRatings = () => {
           conflictStorageKey={conflictStorageKey}
           initialLow={conflictLow}
           initialHigh={conflictHigh}
+          conflictStartedAt={conflictStartedAt}
           onBoundsChange={handleBoundsChange}
+          allowConflictNavigation={allowConflictNavigation}
         />
       )}
       {!isConflict && (
